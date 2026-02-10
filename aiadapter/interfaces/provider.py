@@ -5,7 +5,6 @@ from aiadapter.interfaces.airesponse import AIResponse
 from aiadapter.interfaces.aicapability import AICapability
 from typing import List, Dict, Any
 
-
 class AIProvider(ABC):
 
     @abstractmethod
