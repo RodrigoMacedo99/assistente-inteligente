@@ -1,7 +1,20 @@
 [project]
 name = "assistente-inteligente"
 version = "0.1.0"
-description = "Add your description here"
+description = "Assistente inteligente com arquitetura limpa"
 readme = "README.md"
-requires-python = ">=3.13"
-dependencies = []
+requires-python = ">=3.10"
+dependencies = [
+    "python-dotenv>=1.0.0"
+]
+
+[project.optional-dependencies]
+openai = ["openai>=1.0.0"]
+anthropic = ["anthropic>=0.18.0"]
+langchain = ["langchain>=0.2.0"]
+dev = [
+    "pytest",
+    "black",
+    "ruff",
+    "mypy"
+]
