@@ -7,9 +7,7 @@ import json
 
 from aiadapter.config.settings import load_settings
 from aiadapter.infrastructure.providers.openai.openai_provider import OpenAIProvider
-from aiadapter.infrastructure.providers.anthropic.calude_provider import ClaudeProvider
-from aiadapter.infrastructure.providers.google.gemini_provider import GeminiProvider
-from aiadapter.infrastructure.providers.local.ollama_provider import OllamaProvider
+from aiadapter.infrastructure.providers.anthropic.calude_provider import AnthropicProvider
 from aiadapter.infrastructure.routing.cost_router import CostRouter
 from aiadapter.infrastructure.governance.simple_policy import SimplePolicy
 from aiadapter.infrastructure.governance.logger_observability import LoggerObservability
@@ -19,29 +17,27 @@ from aiadapter.application.ai_service import AIService
 from aiadapter.core.entities.airequest import AIRequest
 from openai import OpenAI
 from anthropic import Anthropic
-import google.generativeai as genai
 
-# Inicializa a FastAPI app
+# Initialize FastAPI app
 app = FastAPI(
     title="AI Adapter API",
     description="Multi-provider AI Gateway with Clean Architecture",
     version="1.0.0"
 )
 
-# Configuração de logging
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Carreta as configurações do ambiente
+# Load settings
 settings = load_settings()
 
-# Multi-tenant suporte: Dicionário para armazenar serviços específicos de cada tenant
+# Multi-tenant support: Dictionary to store tenant-specific services
 tenants: Dict[str, AIService] = {}
 
 # Request/Response models
 class AIRequestModel(BaseModel):
     prompt: str
-    model: Optional[str] = None
     messages: Optional[List[Dict[str, Any]]] = None
     temperature: float = 0.7
     max_tokens: int = 512
@@ -70,18 +66,8 @@ def get_or_create_tenant_service(tenant_id: str) -> AIService:
         openai_client = OpenAI(api_key=settings.openai_api_key)
         openai_provider = OpenAIProvider(client=openai_client)
 
-        anthropic_client = Anthropic(api_key=settings.anthropic_api_key)
-        claude_provider = ClaudeProvider(client=anthropic_client)
-
-        gemini_provider = GeminiProvider(api_key=settings.gemini_api_key)
-
-        ollama_provider = OllamaProvider(base_url=settings.ollama_base_url)
-
         providers = {
             "openai": openai_provider,
-            "anthropic": claude_provider,
-            "gemini": gemini_provider,
-            "ollama": ollama_provider,
         }
 
         router = CostRouter(providers)
@@ -184,41 +170,6 @@ async def list_models(tenant_id: str = Depends(get_tenant_id)):
                 {
                     "name": "gpt-4o-mini",
                     "provider": "openai",
-                    "supports_streaming": True
-                },
-                {
-                    "name": "claude-3-opus-20240229",
-                    "provider": "anthropic",
-                    "supports_streaming": True
-                },
-                {
-                    "name": "claude-3-sonnet-20240229",
-                    "provider": "anthropic",
-                    "supports_streaming": True
-                },
-                {
-                    "name": "claude-3-haiku-20240307",
-                    "provider": "anthropic",
-                    "supports_streaming": True
-                },
-                {
-                    "name": "gemini-pro",
-                    "provider": "gemini",
-                    "supports_streaming": True
-                },
-                {
-                    "name": "llama3",
-                    "provider": "ollama",
-                    "supports_streaming": True
-                },
-                {
-                    "name": "mistral",
-                    "provider": "ollama",
-                    "supports_streaming": True
-                },
-                {
-                    "name": "gemma",
-                    "provider": "ollama",
                     "supports_streaming": True
                 }
             ]

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional, Dict, Any, List
 
 @dataclass
 class AIResponse:
@@ -10,7 +11,9 @@ class AIResponse:
     provider_name: Nome do provider que respondeu.
     cost: Custo estimado da chamada
     """
-    output: str
+    output: Optional[str] = None
     tokens_used: int
     provider_name: str 
     cost: float
+    is_streaming_chunk: bool = False
+    tool_calls: Optional[List[Dict[str, Any]]] = None
