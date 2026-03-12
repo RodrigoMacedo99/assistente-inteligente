@@ -1,6 +1,6 @@
 # AI Adapter — Documentação Técnica Completa
 
-> Gateway multi-provider de Inteligência Artificial com seleção inteligente de modelos baseada em custo, capacidade de hardware e complexidade da tarefa.
+> Gateway multi-provider de Inteligência Artificial com seleção inteligente de modelos baseada em custo, capacidade de hardware e complexidade da tarefa. Suporta texto (LLM), síntese de voz (TTS) e transcrição de voz (STT).
 
 ---
 
@@ -22,34 +22,42 @@
 14. [Lógica de Roteamento por Tier](#14-lógica-de-roteamento-por-tier)
 15. [Gerenciamento de Quotas Diárias](#15-gerenciamento-de-quotas-diárias)
 16. [Análise de Hardware e Modelos Locais](#16-análise-de-hardware-e-modelos-locais)
-17. [Referência da API REST](#17-referência-da-api-rest)
-18. [Configuração e Instalação](#18-configuração-e-instalação)
-19. [Estrutura de Arquivos](#19-estrutura-de-arquivos)
+17. [Providers de Voz — TTS e STT](#17-providers-de-voz--tts-e-stt)
+18. [Diagrama de Classes — Voz](#18-diagrama-de-classes--voz)
+19. [Diagrama de Sequência — Fluxo de Voz](#19-diagrama-de-sequência--fluxo-de-voz)
+20. [Diagrama de Estado — Seleção de Provider de Voz](#20-diagrama-de-estado--seleção-de-provider-de-voz)
+21. [Referência da API REST](#21-referência-da-api-rest)
+22. [Configuração e Instalação](#22-configuração-e-instalação)
+23. [Estrutura de Arquivos](#23-estrutura-de-arquivos)
 
 ---
 
 ## 1. Visão Geral
 
-O **AI Adapter** é um microserviço que atua como **gateway unificado** para múltiplos provedores de LLMs (Large Language Models). Ele não expõe modelos diretamente ao consumidor — em vez disso, **decide qual modelo usar** com base em critérios objetivos.
+O **AI Adapter** é um microserviço que atua como **gateway unificado** para múltiplos provedores de IA — tanto para geração de texto (LLM) quanto para síntese de voz (TTS) e transcrição de voz (STT). Ele não expõe modelos diretamente ao consumidor — em vez disso, **decide qual modelo usar** com base em critérios objetivos.
 
 ### Responsabilidade Central
 
 ```
-Sistema Consumidor (Agente de Prompts)
+Sistema Consumidor
          │
-         │  POST /v1/completions
-         │  { prompt, difficulty, complexity, max_cost }
+         ├── POST /v1/completions  { prompt, difficulty, complexity }
+         ├── POST /v1/speak        { text, voice, speed }
+         ├── POST /v1/transcribe   { audio_file }
+         └── WS   /v1/transcribe/stream
          ▼
     ┌─────────────┐
     │  AI Adapter │  ← decide o provider
     └─────────────┘
          │
-    ┌────┴────────────────────────────────────┐
-    │  Ollama  Groq  Gemini  DeepSeek  OpenAI │
-    └─────────────────────────────────────────┘
+    ┌────┴──────────────────────────────────────────────────────┐
+    │  LLM: Ollama  Groq  Gemini  DeepSeek  Mistral  OpenAI    │
+    │  TTS: pyttsx3 EdgeTTS  ElevenLabs  OpenAI-TTS            │
+    │  STT: Whisper-local  Groq-Whisper  OpenAI-Whisper        │
+    └───────────────────────────────────────────────────────────┘
 ```
 
-### Princípio de Funcionamento
+### Princípio de Funcionamento — LLM
 
 O sistema consumidor envia a tarefa com **metadados de contexto**:
 
@@ -61,6 +69,17 @@ O sistema consumidor envia a tarefa com **metadados de contexto**:
 | `max_cost` | `free\|low\|medium\|high` | Custo máximo aceitável |
 
 O AI Adapter então **roteia automaticamente** para o provider mais adequado, considerando também quotas diárias disponíveis e hardware local.
+
+### Princípio de Funcionamento — Voz
+
+Para TTS e STT, o `AudioService` aplica uma estratégia de **fallback em cascata**:
+
+```
+TTS: pyttsx3 (offline) → Edge TTS (gratuito) → ElevenLabs (free tier) → OpenAI TTS (pago)
+STT: Whisper local (offline) → Groq Whisper (gratuito) → OpenAI Whisper (pago)
+```
+
+O provider local é sempre tentado primeiro — garantindo funcionamento **sem internet** no Raspberry Pi. Providers remotos são ativados automaticamente quando o local não estiver disponível.
 
 ---
 
@@ -1352,7 +1371,343 @@ else:
 
 ---
 
-## 17. Referência da API REST
+## 17. Providers de Voz — TTS e STT
+
+O AI Adapter v2.1 incorpora suporte completo a **voz** em ambas as direções: síntese (texto → áudio) e transcrição (áudio → texto). Assim como o roteamento de LLMs prioriza custo e qualidade, o `AudioService` aplica uma lógica de **fallback em cascata**: sempre tenta o provider mais econômico primeiro.
+
+### 17.1 Teoria — Text-to-Speech (TTS)
+
+TTS é o processo de converter texto escrito em fala sintetizada. As abordagens evoluíram de:
+
+1. **Concatenação de fonemas** (anos 90): recortes de fala humana ligados — sons robóticos
+2. **Síntese paramétrica** (HMM): modelo estatístico do trato vocal — melhor, mas artificial
+3. **Neural TTS** (WaveNet, Tacotron, 2016+): redes neurais profundas que aprendem a imitar voz humana com qualidade indistinguível
+
+O sistema usa **4 providers TTS** em ordem de preferência:
+
+| Provider | Tipo | Custo | Qualidade | Idioma |
+|----------|------|-------|-----------|--------|
+| `pyttsx3` | Local/offline | Grátis | Básica (SAPI5/espeak) | Sistema operacional |
+| `edge_tts` | Remoto gratuito | Grátis | Excelente (neural Azure) | 400+ vozes, pt-BR nativo |
+| `elevenlabs_tts` | Remoto pago | 10k chars/mês grátis | Ultra-realista | Multilingual v2 |
+| `openai_tts` | Remoto pago | $15/1M chars (tts-1) | Muito boa | 6 vozes multilingual |
+
+**Vozes pt-BR disponíveis (Edge TTS):**
+- `pt-BR-AntonioNeural` — masculina, geral
+- `pt-BR-FranciscaNeural` — feminina, geral *(padrão)*
+- `pt-BR-ThalitaNeural` — feminina, conversacional
+
+### 17.2 Teoria — Speech-to-Text (STT)
+
+STT converte áudio de fala em texto. A revolução veio com o modelo **Whisper** da OpenAI (2022), treinado em 680.000 horas de áudio multilíngue. Características do Whisper:
+
+- **Zero-shot multilingual**: funciona em 99+ idiomas sem fine-tuning
+- **Robusto a ruído**: treinado com diversas condições acústicas
+- **Tamanhos escaláveis**: de `tiny` (39M params, Pi Zero) a `large` (1.5B params, GPU server)
+
+O sistema usa **3 providers STT** em ordem de preferência:
+
+| Provider | Tipo | Custo | Qualidade | Modelo |
+|----------|------|-------|-----------|--------|
+| `whisper_local` | Local/offline | Grátis | Boa–Excelente | faster-whisper (CTranslate2) |
+| `groq_stt` | Remoto gratuito | Grátis (quota diária) | Excelente | whisper-large-v3 |
+| `openai_stt` | Remoto pago | $0.006/min | Excelente | whisper-1 |
+
+**faster-whisper** é uma reimplementação do Whisper usando **CTranslate2** que oferece:
+- 4× mais rápido que o Whisper original no mesmo hardware
+- 2× menos memória RAM via quantização int8
+- Ideal para Raspberry Pi 4 com modelo `base` ou `small`
+
+### 17.3 Seleção de Modelo Whisper por Hardware
+
+| Modelo | Params | RAM | Uso recomendado |
+|--------|--------|-----|-----------------|
+| `tiny` | 39M | ~1 GB | Pi Zero 2W, ambientes extremamente limitados |
+| `base` | 74M | ~1,5 GB | Pi 4 com 2 GB RAM *(padrão do sistema)* |
+| `small` | 244M | ~2,5 GB | Pi 4 com 4 GB, boa qualidade |
+| `medium` | 769M | ~5 GB | Desktop/servidor sem GPU |
+| `large-v3` | 1.5B | ~10 GB | GPU ou servidor dedicado — máxima qualidade |
+
+---
+
+## 18. Diagrama de Classes — Voz
+
+```mermaid
+classDiagram
+    class AudioRequest {
+        +audio_data: Optional[bytes]
+        +audio_format: str
+        +language: Optional[str]
+        +text: Optional[str]
+        +voice: Optional[str]
+        +speed: float
+        +audio_format_out: str
+        +preferred_provider: Optional[str]
+        +is_stt() bool
+        +is_tts() bool
+    }
+
+    class AudioResponse {
+        +provider_name: str
+        +cost: float
+        +transcription: Optional[str]
+        +language_detected: Optional[str]
+        +confidence: float
+        +segments: Optional[list]
+        +audio_data: Optional[bytes]
+        +audio_format: str
+        +duration_seconds: float
+    }
+
+    class AITTSProvider {
+        <<interface>>
+        +speak(request: AudioRequest) AudioResponse
+        +is_available() bool
+        +get_name() str
+        +list_voices(language: str) list[dict]
+    }
+
+    class AISTTProvider {
+        <<interface>>
+        +transcribe(request: AudioRequest) AudioResponse
+        +is_available() bool
+        +get_name() str
+        +supported_formats() list[str]
+    }
+
+    class AudioService {
+        -_tts_providers: list[AITTSProvider]
+        -_stt_providers: list[AISTTProvider]
+        +speak(request: AudioRequest) AudioResponse
+        +transcribe(request: AudioRequest) AudioResponse
+        +list_tts_voices(language: str) list[dict]
+        +status() dict
+        -_get_available_tts(preferred) list
+        -_get_available_stt(preferred) list
+    }
+
+    class Pyttsx3TTSProvider {
+        -_engine: pyttsx3.Engine
+        -_rate: int
+        -_volume: float
+        +speak(request) AudioResponse
+        +list_voices(language) list[dict]
+    }
+
+    class EdgeTTSProvider {
+        -_default_voice: str
+        -_available: bool
+        +speak(request) AudioResponse
+        +list_voices_async() list[dict]
+        -_synthesize_async(text, voice, rate) bytes
+        -_speed_to_rate(speed) str
+    }
+
+    class ElevenLabsTTSProvider {
+        -_api_key: str
+        -_model_id: str
+        -_client: ElevenLabs
+        +speak(request) AudioResponse
+        -_synthesize(text, voice_id) bytes
+    }
+
+    class OpenAITTSProvider {
+        -_api_key: str
+        -_model: str
+        -_client: OpenAI
+        +speak(request) AudioResponse
+    }
+
+    class WhisperLocalProvider {
+        -_model_size: str
+        -_device: str
+        -_model: WhisperModel
+        +transcribe(request) AudioResponse
+        +model_size: str
+        -_try_load()
+    }
+
+    class GroqSTTProvider {
+        -_api_key: str
+        -_model: str
+        -_client: Groq
+        +transcribe(request) AudioResponse
+    }
+
+    class OpenAISTTProvider {
+        -_api_key: str
+        -_client: OpenAI
+        +transcribe(request) AudioResponse
+    }
+
+    class MicrophoneCapture {
+        -_sample_rate: int
+        -_channels: int
+        -_backend: str
+        +record_fixed(duration) bytes
+        +record_until_silence(max_dur, silence_dur) bytes
+        +list_devices() list[dict]
+        +is_available() bool
+        -_rms(samples) float
+    }
+
+    AITTSProvider <|.. Pyttsx3TTSProvider
+    AITTSProvider <|.. EdgeTTSProvider
+    AITTSProvider <|.. ElevenLabsTTSProvider
+    AITTSProvider <|.. OpenAITTSProvider
+
+    AISTTProvider <|.. WhisperLocalProvider
+    AISTTProvider <|.. GroqSTTProvider
+    AISTTProvider <|.. OpenAISTTProvider
+
+    AudioService o-- AITTSProvider : uses
+    AudioService o-- AISTTProvider : uses
+    AudioService ..> AudioRequest : consumes
+    AudioService ..> AudioResponse : produces
+
+    AITTSProvider ..> AudioRequest : consumes
+    AITTSProvider ..> AudioResponse : produces
+    AISTTProvider ..> AudioRequest : consumes
+    AISTTProvider ..> AudioResponse : produces
+```
+
+---
+
+## 19. Diagrama de Sequência — Fluxo de Voz
+
+### 19.1 TTS — POST /v1/speak
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant API as FastAPI /v1/speak
+    participant SVC as AudioService
+    participant P1 as Pyttsx3TTS
+    participant P2 as EdgeTTS
+    participant P3 as ElevenLabsTTS
+
+    Client->>API: POST /v1/speak (form: text, voice, speed)
+    API->>SVC: speak(AudioRequest)
+    SVC->>P1: is_available()?
+    P1-->>SVC: true (local disponível)
+    SVC->>P1: speak(request)
+    alt pyttsx3 OK
+        P1-->>SVC: AudioResponse(audio_data=WAV, cost=0.0)
+        SVC-->>API: AudioResponse
+        API-->>Client: 200 audio/wav (X-Provider: pyttsx3)
+    else pyttsx3 falhou
+        P1-->>SVC: RuntimeError
+        SVC->>P2: is_available()?
+        P2-->>SVC: true (edge-tts instalado)
+        SVC->>P2: speak(request)
+        P2->>P2: asyncio.run(_synthesize_async)
+        P2-->>SVC: AudioResponse(audio_data=MP3, cost=0.0)
+        SVC-->>API: AudioResponse
+        API-->>Client: 200 audio/mpeg (X-Provider: edge_tts)
+    else edge_tts também falhou
+        SVC->>P3: is_available()? + speak(request)
+        P3->>P3: ElevenLabs API call
+        P3-->>SVC: AudioResponse(audio_data=MP3, cost=0.000018)
+        SVC-->>API: AudioResponse
+        API-->>Client: 200 audio/mpeg (X-Provider: elevenlabs_tts)
+    end
+```
+
+### 19.2 STT — POST /v1/transcribe
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant API as FastAPI /v1/transcribe
+    participant SVC as AudioService
+    participant W as WhisperLocal
+    participant G as GroqSTT
+    participant O as OpenAISTT
+
+    Client->>API: POST /v1/transcribe (file: audio.wav)
+    API->>API: await file.read()
+    API->>SVC: transcribe(AudioRequest(audio_data, format))
+    SVC->>W: is_available()?
+    W-->>SVC: true (modelo carregado em memória)
+    SVC->>W: transcribe(request)
+    W->>W: salva tmpfile → faster_whisper.transcribe()
+    W->>W: VAD filter + beam_size=5
+    W-->>SVC: AudioResponse(transcription, language_detected, segments)
+    SVC-->>API: AudioResponse
+    API-->>Client: 200 JSON {transcription, language_detected, segments, cost: 0.0}
+
+    Note over Client,O: Se Whisper local não disponível:
+    SVC->>G: is_available()? → speak(request)
+    G->>G: groq.audio.transcriptions.create(whisper-large-v3)
+    G-->>SVC: AudioResponse(transcription, cost=0.0)
+```
+
+### 19.3 STT em Tempo Real — WebSocket /v1/transcribe/stream
+
+```mermaid
+sequenceDiagram
+    actor Client
+    participant WS as WebSocket /v1/transcribe/stream
+    participant SVC as AudioService
+
+    Client->>WS: WebSocket connect
+    WS-->>Client: 101 Switching Protocols
+
+    loop Envio de chunks
+        Client->>WS: bytes (chunk PCM 16kHz)
+        WS-->>Client: {"status": "chunk_received", "total_bytes": N}
+    end
+
+    Client->>WS: text {"done": true, "language": "pt"}
+    WS->>WS: junta chunks → monta WAV
+    WS->>SVC: transcribe(AudioRequest)
+    SVC-->>WS: AudioResponse
+    WS-->>Client: {"transcription": "...", "language_detected": "pt", "final": true}
+    WS->>WS: fecha conexão
+```
+
+---
+
+## 20. Diagrama de Estado — Seleção de Provider de Voz
+
+```mermaid
+stateDiagram-v2
+    [*] --> Iniciando: AudioService.speak() / .transcribe()
+
+    Iniciando --> FiltrandoDisponiveis: filtra is_available()
+
+    FiltrandoDisponiveis --> VerificandoPreferido: lista providers disponíveis
+
+    VerificandoPreferido --> TentandoProvider: preferred_provider definido?
+    VerificandoPreferido --> TentandoProvider: usa ordem padrão
+
+    state TentandoProvider {
+        [*] --> Executando
+        Executando --> Sucesso: resposta OK
+        Executando --> Falha: exceção capturada
+
+        Falha --> ProximoProvider: ainda há providers
+        Falha --> TodosFalharam: lista esgotada
+    }
+
+    Sucesso --> [*]: retorna AudioResponse
+    TodosFalharam --> [*]: RuntimeError "Todos os providers falharam"
+
+    state "Ordem TTS" as OrdemTTS {
+        pyttsx3_local --> edge_tts_gratis
+        edge_tts_gratis --> elevenlabs_pago
+        elevenlabs_pago --> openai_tts_pago
+    }
+
+    state "Ordem STT" as OrdemSTT {
+        whisper_local --> groq_whisper_gratis
+        groq_whisper_gratis --> openai_whisper_pago
+    }
+```
+
+---
+
+## 21. Referência da API REST
 
 ### Base URL
 
@@ -1551,7 +1906,166 @@ Retorna estatísticas de um tenant específico.
 
 ---
 
-## 18. Configuração e Instalação
+### `POST /v1/speak`
+
+Sintetiza voz a partir de texto. Retorna bytes de áudio diretamente.
+
+**Content-Type:** `multipart/form-data`
+
+| Campo | Tipo | Default | Descrição |
+|-------|------|---------|-----------|
+| `text` | `string` | — | Texto a ser sintetizado (obrigatório) |
+| `voice` | `string\|null` | `null` | Nome/ID da voz (ex: `pt-BR-FranciscaNeural`, `nova`) |
+| `speed` | `float` | `1.0` | Velocidade 0.25–4.0 |
+| `preferred_provider` | `string\|null` | `null` | `pyttsx3`, `edge_tts`, `elevenlabs_tts`, `openai_tts` |
+
+**Response:** `audio/mpeg` ou `audio/wav` (bytes do áudio)
+
+**Headers da resposta:**
+```
+X-Provider: edge_tts
+X-Cost: 0.0
+X-Audio-Format: mp3
+```
+
+**Exemplo cURL:**
+```bash
+curl -X POST http://localhost:8000/v1/speak \
+  -F "text=Olá! Bem-vindo ao AI Adapter." \
+  -F "voice=pt-BR-FranciscaNeural" \
+  -F "speed=1.0" \
+  --output resposta.mp3
+```
+
+---
+
+### `POST /v1/transcribe`
+
+Transcreve um arquivo de áudio para texto.
+
+**Content-Type:** `multipart/form-data`
+
+| Campo | Tipo | Default | Descrição |
+|-------|------|---------|-----------|
+| `file` | `UploadFile` | — | Arquivo de áudio (wav, mp3, m4a, webm) |
+| `language` | `string\|null` | `null` | Código do idioma (`pt`, `en`). `null` = auto-detect |
+| `preferred_provider` | `string\|null` | `null` | `whisper_local`, `groq_stt`, `openai_stt` |
+
+**Response:**
+
+```json
+{
+  "transcription": "Olá, isso é um teste de transcrição.",
+  "language_detected": "pt",
+  "confidence": 0.98,
+  "segments": [
+    {"start": 0.0, "end": 2.3, "text": "Olá, isso é um teste"},
+    {"start": 2.3, "end": 3.8, "text": "de transcrição."}
+  ],
+  "provider": "whisper_local",
+  "cost": 0.0
+}
+```
+
+**Exemplo cURL:**
+```bash
+curl -X POST http://localhost:8000/v1/transcribe \
+  -F "file=@minha_voz.wav" \
+  -F "language=pt"
+```
+
+---
+
+### `GET /v1/voices`
+
+Lista todas as vozes TTS disponíveis.
+
+**Query Params:** `language=pt` (padrão)
+
+**Response:**
+
+```json
+{
+  "voices": [
+    {
+      "name": "pt-BR-FranciscaNeural",
+      "gender": "female",
+      "language": "pt-BR",
+      "style": "general",
+      "provider": "edge_tts"
+    },
+    {
+      "name": "nova",
+      "gender": "female",
+      "language": "multilingual",
+      "style": "quick",
+      "provider": "openai_tts"
+    }
+  ]
+}
+```
+
+---
+
+### `GET /v1/audio/status`
+
+Retorna disponibilidade dos providers de voz configurados.
+
+**Response:**
+
+```json
+{
+  "tts": [
+    {"name": "pyttsx3",        "available": true},
+    {"name": "edge_tts",       "available": true},
+    {"name": "elevenlabs_tts", "available": false},
+    {"name": "openai_tts",     "available": true}
+  ],
+  "stt": [
+    {"name": "whisper_local", "available": true},
+    {"name": "groq_stt",      "available": true},
+    {"name": "openai_stt",    "available": true}
+  ]
+}
+```
+
+---
+
+### `WebSocket /v1/transcribe/stream`
+
+Transcrição em tempo real via WebSocket.
+
+**Protocolo:**
+
+```
+→ bytes               : chunk PCM raw (16kHz, mono, int16)
+→ {"done": true}      : sinaliza fim do áudio
+← {"status": "chunk_received", "total_bytes": N}  : ACK de chunk
+← {"transcription": "...", "language_detected": "pt", "final": true}
+```
+
+**Exemplo Python:**
+```python
+import asyncio, websockets, json
+
+async def transcrever(arquivo_wav: bytes):
+    uri = "ws://localhost:8000/v1/transcribe/stream"
+    async with websockets.connect(uri) as ws:
+        # Envia em chunks de 16KB
+        for i in range(0, len(arquivo_wav), 16384):
+            await ws.send(arquivo_wav[i:i+16384])
+            ack = await ws.recv()
+            print(json.loads(ack))
+
+        # Sinaliza fim
+        await ws.send(json.dumps({"done": True, "language": "pt"}))
+        resultado = json.loads(await ws.recv())
+        print(resultado["transcription"])
+```
+
+---
+
+## 22. Configuração e Instalação
 
 ### Pré-requisitos
 
@@ -1588,17 +2102,76 @@ python main.py
 uvicorn aiadapter.api.main:app --reload
 ```
 
-### Configuração Mínima (só free)
-
-Para começar sem gastar nada, configure apenas:
+### Variáveis de Ambiente Completas
 
 ```env
-GROQ_API_KEY=gsk_...          # groq.com - cadastro gratuito
+# ── LLM Providers ─────────────────────────────────────────────────────────────
+OPENAI_API_KEY=sk-...           # openai.com
+ANTHROPIC_API_KEY=sk-ant-...    # anthropic.com
+GEMINI_API_KEY=AIza...          # aistudio.google.com (free tier disponível)
+GROQ_API_KEY=gsk_...            # console.groq.com (free tier 14.400 req/dia)
+MISTRAL_API_KEY=...             # console.mistral.ai
+DEEPSEEK_API_KEY=...            # platform.deepseek.com ($5 crédito inicial)
+OPENROUTER_API_KEY=sk-or-...    # openrouter.ai (free tier disponível)
+OLLAMA_BASE_URL=http://localhost:11434  # padrão
+
+# ── Voice TTS ─────────────────────────────────────────────────────────────────
+ELEVENLABS_API_KEY=...          # elevenlabs.io (10k chars/mês grátis)
+# OpenAI TTS usa OPENAI_API_KEY automaticamente
+
+# ── Voice STT ─────────────────────────────────────────────────────────────────
+WHISPER_MODEL_SIZE=base         # tiny | base | small | medium | large-v3
+# Groq STT usa GROQ_API_KEY automaticamente
+
+# ── Servidor ──────────────────────────────────────────────────────────────────
+HOST=0.0.0.0
+PORT=8000
+LOG_LEVEL=INFO
+OPENROUTER_SITE_URL=http://localhost
+OPENROUTER_SITE_NAME=AI Adapter
+```
+
+### Configuração Mínima (só free — sem gastar nada)
+
+```env
+GROQ_API_KEY=gsk_...          # groq.com - cadastro gratuito (LLM + STT)
 GEMINI_API_KEY=AIza...         # aistudio.google.com - cadastro gratuito
 OPENROUTER_API_KEY=sk-or-...   # openrouter.ai - cadastro gratuito
 ```
 
-E instale o Ollama para modelos locais completamente gratuitos.
+Instale o Ollama para modelos locais e voz offline:
+```bash
+# Ollama — LLM local
+curl -fsSL https://ollama.ai/install.sh | sh
+ollama pull llama3.2:3b
+
+# Dependências de voz local (offline total)
+pip install -e ".[voice-local]"     # faster-whisper + pyttsx3
+
+# Dependências de voz remota gratuita
+pip install -e ".[voice-remote]"    # edge-tts (gratuito, pt-BR nativo)
+
+# Microfone (captura em tempo real)
+pip install -e ".[voice-mic]"       # sounddevice + scipy
+```
+
+### Instalação para Raspberry Pi
+
+```bash
+# Pi OS 64-bit (bullseye/bookworm)
+sudo apt-get update
+sudo apt-get install -y python3-pip ffmpeg espeak espeak-ng portaudio19-dev
+
+# Instala o projeto
+pip install -e ".[voice-local,voice-mic]"
+
+# Whisper tiny para Pi com 2GB RAM, base para 4GB+
+echo "WHISPER_MODEL_SIZE=tiny" >> .env   # Pi 2/3
+echo "WHISPER_MODEL_SIZE=base" >> .env   # Pi 4 com 4GB
+
+# Edge TTS (pt-BR gratuito, não precisa de hardware)
+pip install edge-tts
+```
 
 ### Exemplo de Uso (cURL)
 
@@ -1626,18 +2199,30 @@ curl -X POST http://localhost:8000/v1/completions \
     "max_tokens": 2048
   }'
 
-# Verificar quotas
-curl http://localhost:8000/v1/quotas \
-  -H "X-Tenant-ID: meu-agente"
+# Síntese de voz (TTS)
+curl -X POST http://localhost:8000/v1/speak \
+  -F "text=Olá! Sou o assistente de IA, como posso ajudar?" \
+  -F "voice=pt-BR-FranciscaNeural" \
+  --output resposta.mp3
 
-# Verificar hardware
-curl http://localhost:8000/v1/hardware \
-  -H "X-Tenant-ID: meu-agente"
+# Transcrição de voz (STT)
+curl -X POST http://localhost:8000/v1/transcribe \
+  -F "file=@minha_pergunta.wav" \
+  -F "language=pt"
+
+# Listar vozes disponíveis
+curl http://localhost:8000/v1/voices?language=pt
+
+# Verificar quotas
+curl http://localhost:8000/v1/quotas
+
+# Verificar hardware e modelos recomendados
+curl http://localhost:8000/v1/hardware
 ```
 
 ---
 
-## 19. Estrutura de Arquivos
+## 23. Estrutura de Arquivos
 
 ```
 assistente-inteligente/
@@ -1658,9 +2243,11 @@ assistente-inteligente/
     │
     ├── core/                        # ← NÚCLEO (sem dependências externas)
     │   ├── entities/
-    │   │   ├── airequest.py         # Entidade: intenção de uso da IA
-    │   │   ├── airesponse.py        # Entidade: resposta padronizada
-    │   │   └── aiprovidermedata.py  # Entidade: metadados de um provider
+    │   │   ├── airequest.py         # Entidade: intenção de uso da IA (LLM)
+    │   │   ├── airesponse.py        # Entidade: resposta padronizada (LLM)
+    │   │   ├── aiprovidermedata.py  # Entidade: metadados de um provider
+    │   │   ├── audiorequest.py      # Entidade: requisição TTS/STT ← NOVO
+    │   │   └── audioresponse.py     # Entidade: resposta TTS/STT   ← NOVO
     │   ├── enums/
     │   │   └── aicapability.py      # Enum: capacidades (TEXT, VISION, etc.)
     │   └── interfaces/
@@ -1670,7 +2257,9 @@ assistente-inteligente/
     │       ├── cache.py             # Contrato: AICache (ABC)
     │       ├── rate_limiter.py      # Contrato: AIRateLimiter (ABC)
     │       ├── observability.py     # Contrato: AIObservability (ABC)
-    │       └── tool.py              # Contrato: AITool (ABC)
+    │       ├── tool.py              # Contrato: AITool (ABC)
+    │       ├── tts_provider.py      # Contrato: AITTSProvider (ABC) ← NOVO
+    │       └── stt_provider.py      # Contrato: AISTTProvider (ABC) ← NOVO
     │
     ├── infrastructure/              # ← INFRAESTRUTURA (SDKs externos aqui)
     │   ├── providers/
@@ -1681,15 +2270,24 @@ assistente-inteligente/
     │   │   ├── google/
     │   │   │   └── gemini_provider.py
     │   │   ├── groq/
-    │   │   │   └── groq_provider.py    ← NOVO
+    │   │   │   └── groq_provider.py
     │   │   ├── mistral/
-    │   │   │   └── mistral_provider.py ← NOVO
+    │   │   │   └── mistral_provider.py
     │   │   ├── deepseek/
-    │   │   │   └── deepseek_provider.py ← NOVO
+    │   │   │   └── deepseek_provider.py
     │   │   ├── openrouter/
-    │   │   │   └── openrouter_provider.py ← NOVO
-    │   │   └── local/
-    │   │       └── ollama_provider.py
+    │   │   │   └── openrouter_provider.py
+    │   │   ├── local/
+    │   │   │   └── ollama_provider.py
+    │   │   ├── tts/                         # ← NOVO
+    │   │   │   ├── pyttsx3_provider.py      # 100% offline (SAPI5/espeak/nsss)
+    │   │   │   ├── edge_tts_provider.py     # Microsoft Edge TTS gratuito
+    │   │   │   ├── elevenlabs_provider.py   # Ultra-realista (10k chars/mês free)
+    │   │   │   └── openai_tts_provider.py   # OpenAI TTS ($15/1M chars)
+    │   │   └── stt/                         # ← NOVO
+    │   │       ├── whisper_local_provider.py  # faster-whisper offline
+    │   │       ├── groq_stt_provider.py       # whisper-large-v3 gratuito
+    │   │       └── openai_stt_provider.py     # whisper-1 ($0.006/min)
     │   ├── routing/
     │   │   └── cost_router.py       # Seleção inteligente por tier
     │   ├── governance/
@@ -1698,15 +2296,17 @@ assistente-inteligente/
     │   │   ├── simple_cache.py      # Cache em memória
     │   │   ├── simple_rate_limiter.py # Rate limiting por minuto
     │   │   ├── logger_observability.py # Logging estruturado
-    │   │   └── daily_quota_manager.py  # Quotas diárias ← NOVO
+    │   │   └── daily_quota_manager.py  # Quotas diárias com reset automático
     │   └── system/
-    │       └── hardware_analyzer.py    # Detecção de hardware ← NOVO
+    │       ├── hardware_analyzer.py    # Detecção de hardware (RAM/GPU)
+    │       └── microphone_capture.py   # Captura de microfone com VAD ← NOVO
     │
     ├── application/
-    │   └── ai_service.py            # Orquestrador principal (pipeline completo)
+    │   ├── ai_service.py            # Orquestrador LLM (pipeline completo)
+    │   └── audio_service.py         # Orquestrador TTS/STT com fallback ← NOVO
     │
     ├── api/
-    │   └── main.py                  # FastAPI: rotas, DI, inicialização de providers
+    │   └── main.py                  # FastAPI: todas as rotas + voice endpoints
     │
     ├── agents/
     │   ├── base_agent.py            # Agente base com histórico de conversação
@@ -1720,5 +2320,31 @@ assistente-inteligente/
 
 ---
 
-*Documentação gerada para o AI Adapter v2.0.0*
-*Arquitetura: Clean Architecture + Strategy + Chain of Responsibility + Proxy + DI*
+### Testes
+
+```
+tests/
+├── conftest.py                   # Fixtures compartilhadas
+├── unit/
+│   ├── test_entities.py          # AIRequest, AIResponse, AIProviderMetadata
+│   ├── test_policy.py            # SimplePolicy — validação de campos
+│   ├── test_cache.py             # SimpleCache — hit/miss/isolation
+│   ├── test_rate_limiter.py      # SimpleRateLimiter — sliding window
+│   ├── test_quota_manager.py     # DailyQuotaManager — reset, persistência
+│   ├── test_cost_router.py       # CostRouter — tier selection, fallback
+│   ├── test_ai_service.py        # AIService — pipeline completo
+│   ├── test_hardware_analyzer.py # HardwareAnalyzer — mock subprocess
+│   ├── test_observability.py     # LoggerObservability — caplog
+│   ├── test_audio_entities.py    # AudioRequest, AudioResponse ← NOVO
+│   ├── test_audio_service.py     # AudioService — TTS/STT fallback ← NOVO
+│   ├── test_tts_providers.py     # pyttsx3, edge-tts, openai-tts  ← NOVO
+│   └── test_stt_providers.py     # whisper-local, groq-stt, openai-stt ← NOVO
+└── integration/
+    └── test_ollama_integration.py  # Requer Ollama rodando (@pytest.mark.integration)
+```
+
+---
+
+*Documentação gerada para o AI Adapter v2.1.0*
+*Arquitetura: Clean Architecture + Strategy + Chain of Responsibility + Proxy + DI + Template Method*
+*Voz: TTS (pyttsx3 / Edge TTS / ElevenLabs / OpenAI) + STT (faster-whisper / Groq / OpenAI)*
