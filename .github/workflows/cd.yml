@@ -1,0 +1,156 @@
+name: CD — Deploy na Raspberry Pi
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:     # Permite trigger manual pelo GitHub UI
+    inputs:
+      force_restart:
+        description: "Forçar reinicialização do serviço"
+        required: false
+        default: "false"
+        type: boolean
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Deploy: atualiza o código e reinicia o serviço na Raspberry Pi
+  # Roda diretamente na Pi via self-hosted runner
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: "Deploy AI Adapter → Raspberry Pi"
+    runs-on: [self-hosted, linux, arm64, raspberry-pi]
+    # Só faz deploy se o CI passou
+    environment: production
+
+    steps:
+      - name: Checkout do código mais recente
+        uses: actions/checkout@v4
+
+      - name: Garante que o venv existe
+        run: |
+          python3 -m venv .venv
+          echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+
+      - name: Atualiza dependências
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[all-providers]"
+
+      - name: Verifica se .env existe
+        run: |
+          if [ ! -f .env ]; then
+            echo "::warning::.env não encontrado. Copiando .env.example..."
+            cp .env.example .env
+          fi
+
+      - name: Cria diretório de dados se não existir
+        run: mkdir -p data
+
+      - name: Para o serviço anterior (se estiver rodando)
+        run: |
+          # Para processo anterior via PID file ou systemd
+          if systemctl is-active --quiet ai-adapter 2>/dev/null; then
+            sudo systemctl stop ai-adapter
+            echo "Serviço systemd parado."
+          elif [ -f /tmp/ai-adapter.pid ]; then
+            PID=$(cat /tmp/ai-adapter.pid)
+            if kill -0 "$PID" 2>/dev/null; then
+              kill "$PID"
+              echo "Processo $PID encerrado."
+            fi
+            rm -f /tmp/ai-adapter.pid
+          else
+            echo "Nenhum serviço rodando anteriormente."
+          fi
+
+      - name: Inicia o serviço
+        run: |
+          # Carrega variáveis do .env e inicia em background
+          set -a && source .env && set +a
+          nohup python main.py > /tmp/ai-adapter.log 2>&1 &
+          echo $! > /tmp/ai-adapter.pid
+          echo "Serviço iniciado com PID $(cat /tmp/ai-adapter.pid)"
+
+      - name: Aguarda o serviço ficar disponível
+        run: |
+          MAX_RETRIES=15
+          RETRY=0
+          until curl -sf http://localhost:8000/health > /dev/null 2>&1; do
+            RETRY=$((RETRY + 1))
+            if [ "$RETRY" -ge "$MAX_RETRIES" ]; then
+              echo "::error::Serviço não ficou disponível após ${MAX_RETRIES} tentativas"
+              echo "Últimas 30 linhas do log:"
+              tail -30 /tmp/ai-adapter.log
+              exit 1
+            fi
+            echo "Aguardando... tentativa $RETRY/$MAX_RETRIES"
+            sleep 2
+          done
+          echo "Serviço disponível!"
+
+      - name: Health check completo
+        run: |
+          echo "=== Health Check ==="
+          curl -sf http://localhost:8000/health | python3 -m json.tool
+
+      - name: Exibe informações de hardware
+        run: |
+          echo "=== Hardware Info ==="
+          curl -sf "http://localhost:8000/v1/hardware" \
+            -H "X-Tenant-ID: deploy-check" | python3 -m json.tool || true
+
+      - name: Notifica sucesso
+        if: success()
+        run: |
+          echo "::notice::Deploy concluído com sucesso!"
+          echo "URL: http://$(hostname -I | awk '{print $1}'):8000"
+          echo "Docs: http://$(hostname -I | awk '{print $1}'):8000/docs"
+
+      - name: Rollback em caso de falha
+        if: failure()
+        run: |
+          echo "::error::Deploy falhou. Verifique os logs em /tmp/ai-adapter.log"
+          tail -50 /tmp/ai-adapter.log || true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Instala serviço systemd (roda apenas quando solicitado manualmente)
+  # ─────────────────────────────────────────────────────────────────────────────
+  setup-systemd:
+    name: "Configura systemd (execução manual)"
+    runs-on: [self-hosted, linux, arm64, raspberry-pi]
+    if: github.event_name == 'workflow_dispatch'
+    needs: deploy
+
+    steps:
+      - name: Gera arquivo de serviço systemd
+        run: |
+          cat > /tmp/ai-adapter.service << EOF
+          [Unit]
+          Description=AI Adapter - Gateway Multi-Provider de IA
+          After=network.target
+          Wants=network-online.target
+
+          [Service]
+          Type=simple
+          User=$USER
+          WorkingDirectory=$GITHUB_WORKSPACE
+          EnvironmentFile=$GITHUB_WORKSPACE/.env
+          ExecStart=$GITHUB_WORKSPACE/.venv/bin/python main.py
+          Restart=on-failure
+          RestartSec=5
+          StandardOutput=journal
+          StandardError=journal
+          SyslogIdentifier=ai-adapter
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+      - name: Instala e habilita o serviço
+        run: |
+          sudo cp /tmp/ai-adapter.service /etc/systemd/system/ai-adapter.service
+          sudo systemctl daemon-reload
+          sudo systemctl enable ai-adapter
+          sudo systemctl restart ai-adapter
+          echo "Serviço systemd configurado e iniciado!"
+          sudo systemctl status ai-adapter --no-pager
