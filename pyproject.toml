@@ -1,7 +1,7 @@
 [project]
 name = "assistente-inteligente"
-version = "0.1.0"
-description = "Assistente inteligente com arquitetura limpa"
+version = "2.0.0"
+description = "Gateway multi-provider de IA com seleção inteligente por custo, dificuldade e hardware"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -9,17 +9,44 @@ dependencies = [
     "fastapi>=0.100.0",
     "uvicorn>=0.23.0",
     "pydantic>=2.0.0",
-    "requests>=2.31.0"
+    "requests>=2.31.0",
+    "psutil>=5.9.0",         # Análise de hardware (RAM, CPU)
 ]
 
 [project.optional-dependencies]
 openai = ["openai>=1.0.0"]
-anthropic = ["anthropic>=0.18.0"]
-gemini = ["google-generativeai>=0.8.0"]
-langchain = ["langchain>=0.2.0"]
-dev = [
-    "pytest",
-    "black",
-    "ruff",
-    "mypy"
+anthropic = ["anthropic>=0.26.0"]
+gemini = [
+    "google-genai>=1.0.0",
+    "google-generativeai>=0.8.0",   # fallback SDK legado
 ]
+groq = ["groq>=0.9.0"]
+mistral = ["mistralai>=1.0.0"]
+all-providers = [
+    "openai>=1.0.0",
+    "anthropic>=0.26.0",
+    "google-genai>=1.0.0",
+    "groq>=0.9.0",
+    "mistralai>=1.0.0",
+    "psutil>=5.9.0",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "black>=24.0.0",
+    "ruff>=0.4.0",
+    "mypy>=1.9.0",
+    "httpx>=0.27.0",         # Para testes de API
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends.legacy:build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]

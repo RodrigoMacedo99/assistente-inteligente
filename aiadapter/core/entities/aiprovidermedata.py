@@ -1,17 +1,26 @@
-from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from dataclasses import dataclass, field
+from typing import List
+
 
 @dataclass
 class AIProviderMetadata:
     """
-    Descreve as características de um provider, não uma chamada.
+    Descreve as características de um provider.
 
-    name: Nome lógico do provedor
-    model: versão do modelo
-    avg_latency_ms: latência média estimada
-    cost_per_1k_tokens: custo médio por 1000 tokens
+    name: Nome lógico do provedor (ex: "openai", "groq").
+    models: Lista de modelos disponíveis neste provedor.
+    supports_streaming: Se o provedor suporta respostas em streaming.
+    cost_per_1k_tokens: Custo médio por 1000 tokens em USD (output).
+    avg_latency_ms: Latência média estimada em milissegundos.
+    is_local: Se o provedor roda localmente (sem custo de API).
+    daily_free_limit: Limite de requisições/tokens gratuitos por dia (0 = sem limite ou pago).
+    capabilities: Lista de capacidades suportadas (text, vision, function_calling, etc).
     """
     name: str
-    model: str
-    avg_latencya_ms: int
-    cost_per_1k_tokens: float
+    models: List[str] = field(default_factory=list)
+    supports_streaming: bool = True
+    cost_per_1k_tokens: float = 0.0
+    avg_latency_ms: int = 0
+    is_local: bool = False
+    daily_free_limit: int = 0
+    capabilities: List[str] = field(default_factory=lambda: ["text"])
