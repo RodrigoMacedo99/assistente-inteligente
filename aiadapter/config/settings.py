@@ -26,6 +26,12 @@ class Settings:
     openrouter_site_url: str = "http://localhost"
     openrouter_site_name: str = "AI Adapter"
 
+    # Voice — TTS
+    elevenlabs_api_key: Optional[str] = None
+
+    # Voice — STT (Whisper local)
+    whisper_model_size: str = "base"  # tiny | base | small | medium | large-v3
+
 
 def load_settings() -> Settings:
     return Settings(
@@ -42,4 +48,6 @@ def load_settings() -> Settings:
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         openrouter_site_url=os.getenv("OPENROUTER_SITE_URL", "http://localhost"),
         openrouter_site_name=os.getenv("OPENROUTER_SITE_NAME", "AI Adapter"),
+        elevenlabs_api_key=os.getenv("ELEVENLABS_API_KEY"),
+        whisper_model_size=os.getenv("WHISPER_MODEL_SIZE", "base"),
     )
