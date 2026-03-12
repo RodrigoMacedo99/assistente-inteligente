@@ -22,6 +22,26 @@ gemini = [
 ]
 groq = ["groq>=0.9.0"]
 mistral = ["mistralai>=1.0.0"]
+voice-local = [
+    "faster-whisper>=1.0.0",
+    "pyttsx3>=2.90",
+]
+voice-remote = [
+    "edge-tts>=6.1.0",
+    "elevenlabs>=1.0.0",
+]
+voice-mic = [
+    "sounddevice>=0.4.6",
+    "scipy>=1.11.0",
+]
+voice-all = [
+    "faster-whisper>=1.0.0",
+    "pyttsx3>=2.90",
+    "edge-tts>=6.1.0",
+    "elevenlabs>=1.0.0",
+    "sounddevice>=0.4.6",
+    "scipy>=1.11.0",
+]
 all-providers = [
     "openai>=1.0.0",
     "anthropic>=0.26.0",
@@ -29,6 +49,10 @@ all-providers = [
     "groq>=0.9.0",
     "mistralai>=1.0.0",
     "psutil>=5.9.0",
+    "faster-whisper>=1.0.0",
+    "pyttsx3>=2.90",
+    "edge-tts>=6.1.0",
+    "elevenlabs>=1.0.0",
 ]
 dev = [
     "pytest>=8.0.0",

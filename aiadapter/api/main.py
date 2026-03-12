@@ -2,8 +2,8 @@ import logging
 import json
 from typing import Optional, List, Dict, Any
 
-from fastapi import FastAPI, HTTPException, Depends, Header
-from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File, Form, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel, Field
 
 from aiadapter.config.settings import load_settings
@@ -15,7 +15,9 @@ from aiadapter.infrastructure.governance.simple_cache import SimpleCache
 from aiadapter.infrastructure.governance.daily_quota_manager import DailyQuotaManager
 from aiadapter.infrastructure.system.hardware_analyzer import HardwareAnalyzer
 from aiadapter.application.ai_service import AIService
+from aiadapter.application.audio_service import AudioService
 from aiadapter.core.entities.airequest import AIRequest
+from aiadapter.core.entities.audiorequest import AudioRequest
 
 # ─── Providers ────────────────────────────────────────────────────────────────
 from aiadapter.infrastructure.providers.openai.openai_provider import OpenAIProvider
@@ -47,6 +49,51 @@ hardware_analyzer = HardwareAnalyzer(ollama_base_url=settings.ollama_base_url)
 
 # Cache de serviços por tenant
 tenants: Dict[str, AIService] = {}
+
+# AudioService singleton (providers inicializam sob demanda)
+_audio_service: Optional[AudioService] = None
+
+
+def _build_audio_service() -> AudioService:
+    """Constrói o AudioService com todos os providers de voz disponíveis."""
+    from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
+    from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider
+    from aiadapter.infrastructure.providers.tts.openai_tts_provider import OpenAITTSProvider
+    from aiadapter.infrastructure.providers.tts.elevenlabs_provider import ElevenLabsTTSProvider
+    from aiadapter.infrastructure.providers.stt.whisper_local_provider import WhisperLocalProvider as WhisperLocalSTTProvider
+    from aiadapter.infrastructure.providers.stt.groq_stt_provider import GroqSTTProvider
+    from aiadapter.infrastructure.providers.stt.openai_stt_provider import OpenAISTTProvider
+
+    # TTS — ordem: local → gratuito → pago
+    tts_providers = [
+        Pyttsx3TTSProvider(),
+        EdgeTTSProvider(),
+    ]
+    if settings.elevenlabs_api_key:
+        tts_providers.append(ElevenLabsTTSProvider(api_key=settings.elevenlabs_api_key))
+    if settings.openai_api_key:
+        tts_providers.append(OpenAITTSProvider(api_key=settings.openai_api_key))
+
+    # STT — ordem: local → gratuito → pago
+    stt_providers = [
+        WhisperLocalSTTProvider(model_size=settings.whisper_model_size),
+    ]
+    if settings.groq_api_key:
+        stt_providers.append(GroqSTTProvider(api_key=settings.groq_api_key))
+    if settings.openai_api_key:
+        stt_providers.append(OpenAISTTProvider(api_key=settings.openai_api_key))
+
+    svc = AudioService(tts_providers=tts_providers, stt_providers=stt_providers)
+    logger.info(f"[AUDIO] Providers TTS: {[p.get_name() for p in tts_providers if p.is_available()]}")
+    logger.info(f"[AUDIO] Providers STT: {[p.get_name() for p in stt_providers if p.is_available()]}")
+    return svc
+
+
+def get_audio_service() -> AudioService:
+    global _audio_service
+    if _audio_service is None:
+        _audio_service = _build_audio_service()
+    return _audio_service
 
 
 # ─── Request / Response Models ─────────────────────────────────────────────────
@@ -304,6 +351,186 @@ async def get_tenant_stats(tenant_id: str):
         "active": True,
         "quota_status": quota_manager.get_all_status(),
     }
+
+
+# ─── Voice Routes ─────────────────────────────────────────────────────────────
+
+@app.post(
+    "/v1/speak",
+    summary="Síntese de voz (TTS)",
+    description=(
+        "Converte texto em áudio. "
+        "Usa pyttsx3 (offline) → Edge TTS (gratuito) → ElevenLabs → OpenAI conforme disponibilidade."
+    ),
+    response_class=Response,
+)
+async def text_to_speech(
+    text: str = Form(..., description="Texto a ser sintetizado"),
+    voice: Optional[str] = Form(default=None, description="Nome ou ID da voz"),
+    speed: float = Form(default=1.0, ge=0.25, le=4.0, description="Velocidade da fala"),
+    preferred_provider: Optional[str] = Form(default=None, description="Provider preferido (pyttsx3, edge_tts, elevenlabs_tts, openai_tts)"),
+):
+    try:
+        audio_svc = get_audio_service()
+        request = AudioRequest(
+            text=text,
+            voice=voice,
+            speed=speed,
+            preferred_provider=preferred_provider,
+        )
+        response = audio_svc.speak(request)
+
+        media_type = {
+            "mp3": "audio/mpeg",
+            "wav": "audio/wav",
+            "opus": "audio/ogg",
+            "aac": "audio/aac",
+            "flac": "audio/flac",
+        }.get(response.audio_format, "audio/mpeg")
+
+        return Response(
+            content=response.audio_data,
+            media_type=media_type,
+            headers={
+                "X-Provider": response.provider_name,
+                "X-Cost": str(response.cost),
+                "X-Audio-Format": response.audio_format,
+            },
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erro em text_to_speech: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post(
+    "/v1/transcribe",
+    summary="Transcrição de voz (STT)",
+    description=(
+        "Transcreve arquivo de áudio para texto. "
+        "Usa faster-whisper (offline) → Groq Whisper (gratuito) → OpenAI Whisper conforme disponibilidade."
+    ),
+)
+async def speech_to_text(
+    file: UploadFile = File(..., description="Arquivo de áudio (wav, mp3, m4a, webm)"),
+    language: Optional[str] = Form(default=None, description="Código do idioma (ex: pt, en). None = auto-detect"),
+    preferred_provider: Optional[str] = Form(default=None, description="Provider preferido (whisper_local, groq_stt, openai_stt)"),
+):
+    try:
+        audio_data = await file.read()
+        if not audio_data:
+            raise HTTPException(status_code=422, detail="Arquivo de áudio vazio")
+
+        ext = (file.filename or "audio.wav").rsplit(".", 1)[-1].lower()
+
+        audio_svc = get_audio_service()
+        request = AudioRequest(
+            audio_data=audio_data,
+            audio_format=ext,
+            language=language,
+            preferred_provider=preferred_provider,
+        )
+        response = audio_svc.transcribe(request)
+
+        return {
+            "transcription": response.transcription,
+            "language_detected": response.language_detected,
+            "confidence": response.confidence,
+            "segments": response.segments,
+            "provider": response.provider_name,
+            "cost": response.cost,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erro em speech_to_text: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/v1/voices")
+async def list_voices(language: str = "pt"):
+    """Lista todas as vozes TTS disponíveis nos providers configurados."""
+    audio_svc = get_audio_service()
+    return {"voices": audio_svc.list_tts_voices(language)}
+
+
+@app.get("/v1/audio/status")
+async def get_audio_status():
+    """Retorna disponibilidade dos providers de voz (TTS e STT)."""
+    audio_svc = get_audio_service()
+    return audio_svc.status()
+
+
+@app.websocket("/v1/transcribe/stream")
+async def transcribe_stream(websocket: WebSocket):
+    """
+    WebSocket para transcrição em tempo real.
+    Cliente envia chunks de áudio (bytes) e recebe transcrições parciais.
+
+    Protocolo:
+      → bytes   : chunk de áudio PCM 16kHz mono int16
+      → {"done": true}  : sinaliza fim do stream
+      ← {"transcription": "...", "final": false}  : parcial
+      ← {"transcription": "...", "final": true}   : final
+    """
+    await websocket.accept()
+    audio_svc = get_audio_service()
+    chunks: list[bytes] = []
+
+    try:
+        while True:
+            msg = await websocket.receive()
+
+            if "bytes" in msg:
+                chunks.append(msg["bytes"])
+                # Envia ACK a cada chunk recebido
+                await websocket.send_json({"status": "chunk_received", "total_bytes": sum(len(c) for c in chunks)})
+
+            elif "text" in msg:
+                import json as _json
+                data = _json.loads(msg["text"])
+                if data.get("done"):
+                    # Processa áudio acumulado
+                    if chunks:
+                        import io, wave
+                        raw_audio = b"".join(chunks)
+                        buf = io.BytesIO()
+                        with wave.open(buf, "wb") as wf:
+                            wf.setnchannels(1)
+                            wf.setsampwidth(2)
+                            wf.setframerate(16000)
+                            wf.writeframes(raw_audio)
+                        wav_bytes = buf.getvalue()
+
+                        request = AudioRequest(audio_data=wav_bytes, audio_format="wav", language=data.get("language"))
+                        try:
+                            response = audio_svc.transcribe(request)
+                            await websocket.send_json({
+                                "transcription": response.transcription,
+                                "language_detected": response.language_detected,
+                                "segments": response.segments,
+                                "provider": response.provider_name,
+                                "final": True,
+                            })
+                        except Exception as e:
+                            await websocket.send_json({"error": str(e), "final": True})
+                    else:
+                        await websocket.send_json({"error": "Nenhum áudio recebido", "final": True})
+                    break
+
+    except WebSocketDisconnect:
+        logger.info("[WS] Cliente desconectou do transcribe/stream")
+    except Exception as e:
+        logger.error(f"[WS] Erro no transcribe/stream: {e}", exc_info=True)
+        try:
+            await websocket.send_json({"error": str(e)})
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
