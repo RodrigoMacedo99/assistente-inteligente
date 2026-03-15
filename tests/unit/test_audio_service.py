@@ -185,10 +185,27 @@ class TestAudioServiceStatus:
         status = svc.status()
 
         assert len(status["tts"]) == 2
-        assert status["tts"][0] == {"name": "pyttsx3", "available": True}
-        assert status["tts"][1] == {"name": "edge_tts", "available": False}
+        assert status["tts"][0]["name"] == "pyttsx3"
+        assert status["tts"][0]["available"] is True
+        assert status["tts"][1]["name"] == "edge_tts"
+        assert status["tts"][1]["available"] is False
         assert len(status["stt"]) == 1
-        assert status["stt"][0] == {"name": "whisper_local", "available": True}
+        assert status["stt"][0]["name"] == "whisper_local"
+        assert status["stt"][0]["available"] is True
+
+    def test_status_includes_health_fields(self):
+        tts1 = _make_tts_provider("pyttsx3", available=True)
+        svc = AudioService(tts_providers=[tts1])
+
+        status = svc.status()
+
+        entry = status["tts"][0]
+        assert "consecutive_failures" in entry
+        assert "total_failures" in entry
+        assert "total_successes" in entry
+        assert "circuit_open" in entry
+        assert entry["consecutive_failures"] == 0
+        assert entry["circuit_open"] is False
 
     def test_status_empty_providers(self):
         svc = AudioService()

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -21,6 +21,9 @@ class AudioResponse:
     Comuns:
         provider_name: nome do provider que gerou a resposta
         cost: custo estimado em USD
+        fallback_chain: histórico de tentativas de fallback automático.
+            Cada entrada: {"provider": str, "success": bool, "attempts": int, "error"?: str}
+            ou {"provider": str, "skipped": True, "reason": "circuit_open"}
     """
 
     provider_name: str
@@ -36,3 +39,6 @@ class AudioResponse:
     audio_data: Optional[bytes] = None
     audio_format: str = "mp3"
     duration_seconds: float = 0.0
+
+    # Fallback metadata
+    fallback_chain: list = field(default_factory=list)
