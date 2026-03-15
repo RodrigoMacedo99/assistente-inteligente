@@ -22,6 +22,7 @@ class AIRequest:
     max_cost: Custo máximo aceitável - "free", "low", "medium", "high".
     preferred_provider: Nome do provider preferido (opcional).
     """
+
     prompt: str
     model: str | None = None
     messages: list[dict[str, Any]] | None = None

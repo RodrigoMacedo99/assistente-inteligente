@@ -14,6 +14,7 @@ class AIResponse:
     is_streaming_chunk: Indica se é um chunk de streaming.
     tool_calls: Lista de chamadas de ferramentas solicitadas pela IA.
     """
+
     provider_name: str
     tokens_used: int = 0
     cost: float = 0.0

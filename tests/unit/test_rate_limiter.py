@@ -1,6 +1,7 @@
 """
 Testes do SimpleRateLimiter — controle de taxa por tenant.
 """
+
 import time
 from unittest.mock import patch
 

@@ -8,6 +8,7 @@ Latência extremamente baixa (~0.3s para áudios curtos).
 Instalação: pip install groq
 Cadastro gratuito: https://console.groq.com
 """
+
 import logging
 
 from aiadapter.core.entities.audiorequest import AudioRequest
@@ -35,6 +36,7 @@ class GroqSTTProvider(AISTTProvider):
     def _init_client(self):
         try:
             from groq import Groq
+
             self._client = Groq(api_key=self._api_key)
         except ImportError:
             logger.warning("[GROQ-STT] SDK Groq não instalado. Execute: pip install groq")

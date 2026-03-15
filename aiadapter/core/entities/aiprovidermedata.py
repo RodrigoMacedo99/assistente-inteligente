@@ -15,6 +15,7 @@ class AIProviderMetadata:
     daily_free_limit: Limite de requisições/tokens gratuitos por dia (0 = sem limite ou pago).
     capabilities: Lista de capacidades suportadas (text, vision, function_calling, etc).
     """
+
     name: str
     models: list[str] = field(default_factory=list)
     supports_streaming: bool = True

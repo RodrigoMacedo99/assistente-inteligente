@@ -13,7 +13,9 @@ class SimplePolicy(AIPolicy):
 
         valid_difficulties = {"easy", "medium", "hard", "expert"}
         if request.difficulty not in valid_difficulties:
-            raise ValueError(f"Dificuldade inválida: {request.difficulty}. Use: {valid_difficulties}")
+            raise ValueError(
+                f"Dificuldade inválida: {request.difficulty}. Use: {valid_difficulties}"
+            )
 
         valid_priorities = {"low", "normal", "high"}
         if request.priority not in valid_priorities:

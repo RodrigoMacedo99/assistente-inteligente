@@ -1,6 +1,7 @@
 """
 Testes do LoggerObservability — logging estruturado de requests e responses.
 """
+
 import logging
 
 import pytest
@@ -76,8 +77,9 @@ class TestLoggerObservability:
         with caplog.at_level(logging.ERROR, logger="aiadapter"):
             obs.log_error("conexão recusada")
         assert "conexão recusada" in caplog.text
-        assert any(r.levelno == logging.ERROR for r in caplog.records
-                   if "conexão recusada" in r.message)
+        assert any(
+            r.levelno == logging.ERROR for r in caplog.records if "conexão recusada" in r.message
+        )
 
     def test_log_info_nivel_info(self, obs, caplog):
         with caplog.at_level(logging.INFO, logger="aiadapter"):
@@ -86,6 +88,7 @@ class TestLoggerObservability:
 
     def test_implementa_interface(self, obs):
         from aiadapter.core.interfaces.observability import AIObservability
+
         assert isinstance(obs, AIObservability)
 
     def test_usa_logger_aiadapter(self, obs):

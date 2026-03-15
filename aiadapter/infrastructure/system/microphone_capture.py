@@ -14,6 +14,7 @@ Instalação (escolha um):
   pip install sounddevice scipy    # recomendado
   pip install pyaudio              # alternativo
 """
+
 import io
 import logging
 import struct
@@ -21,11 +22,11 @@ import wave
 
 logger = logging.getLogger("aiadapter.microphone")
 
-DEFAULT_SAMPLE_RATE = 16000   # Hz — ideal para Whisper
-DEFAULT_CHANNELS = 1          # mono
-DEFAULT_CHUNK_MS = 100        # ms por chunk de captura
-SILENCE_THRESHOLD_RMS = 500   # nível RMS abaixo = silêncio
-MIN_SPEECH_DURATION = 0.3     # segundos de fala para considerar válida
+DEFAULT_SAMPLE_RATE = 16000  # Hz — ideal para Whisper
+DEFAULT_CHANNELS = 1  # mono
+DEFAULT_CHUNK_MS = 100  # ms por chunk de captura
+SILENCE_THRESHOLD_RMS = 500  # nível RMS abaixo = silêncio
+MIN_SPEECH_DURATION = 0.3  # segundos de fala para considerar válida
 
 
 class MicrophoneCapture:
@@ -48,6 +49,7 @@ class MicrophoneCapture:
     def _detect_backend(self) -> str | None:
         try:
             import sounddevice  # noqa: F401
+
             logger.info("[MIC] Backend: sounddevice")
             return "sounddevice"
         except ImportError:
@@ -55,6 +57,7 @@ class MicrophoneCapture:
 
         try:
             import pyaudio  # noqa: F401
+
             logger.info("[MIC] Backend: pyaudio")
             return "pyaudio"
         except ImportError:
@@ -148,6 +151,7 @@ class MicrophoneCapture:
             logger.warning("[MIC] Nenhuma fala detectada")
 
         import numpy as np
+
         combined = np.concatenate(all_frames, axis=0)
         return self._numpy_to_wav(combined)
 
@@ -277,6 +281,8 @@ class MicrophoneCapture:
         for i in range(pa.get_device_count()):
             info = pa.get_device_info_by_index(i)
             if info["maxInputChannels"] > 0:
-                devices.append({"index": i, "name": info["name"], "channels": info["maxInputChannels"]})
+                devices.append(
+                    {"index": i, "name": info["name"], "channels": info["maxInputChannels"]}
+                )
         pa.terminate()
         return devices

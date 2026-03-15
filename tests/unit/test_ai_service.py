@@ -2,6 +2,7 @@
 Testes do AIService — orquestrador principal do pipeline de IA.
 Todos os providers são mockados; nenhuma chamada real à API é feita.
 """
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,6 +19,7 @@ from aiadapter.core.interfaces.rate_limiter import AIRateLimiter
 from aiadapter.core.interfaces.router import AIRouter
 
 # ─── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def mock_policy():
@@ -98,6 +100,7 @@ def request_simples():
 
 # ─── Happy Path ────────────────────────────────────────────────────────────────
 
+
 class TestAIServiceHappyPath:
     def test_retorna_resposta_do_provider(self, service, request_simples, good_response):
         resposta = service.execute(request_simples)
@@ -108,14 +111,16 @@ class TestAIServiceHappyPath:
         service.execute(request_simples)
         mock_policy.validate.assert_called_once_with(request_simples)
 
-    def test_rate_limiter_verificado_e_registrado(self, service, request_simples,
-                                                   mock_rate_limiter):
+    def test_rate_limiter_verificado_e_registrado(
+        self, service, request_simples, mock_rate_limiter
+    ):
         service.execute(request_simples)
         mock_rate_limiter.allow_request.assert_called_once_with(request_simples)
         mock_rate_limiter.record_request.assert_called_once_with(request_simples)
 
-    def test_cache_verificado_e_atualizado(self, service, request_simples, mock_cache,
-                                           good_response):
+    def test_cache_verificado_e_atualizado(
+        self, service, request_simples, mock_cache, good_response
+    ):
         service.execute(request_simples)
         mock_cache.get.assert_called_once_with(request_simples)
         mock_cache.set.assert_called_once_with(request_simples, good_response)
@@ -124,8 +129,9 @@ class TestAIServiceHappyPath:
         service.execute(request_simples)
         mock_router.route.assert_called_once_with(request_simples)
 
-    def test_observability_log_request_e_response(self, service, request_simples,
-                                                   mock_observability, good_response):
+    def test_observability_log_request_e_response(
+        self, service, request_simples, mock_observability, good_response
+    ):
         service.execute(request_simples)
         mock_observability.log_request.assert_called_once_with(request_simples)
         mock_observability.log_response.assert_called_once_with(good_response)
@@ -133,23 +139,26 @@ class TestAIServiceHappyPath:
 
 # ─── Cache Hit ─────────────────────────────────────────────────────────────────
 
+
 class TestAIServiceCacheHit:
-    def test_retorna_resposta_do_cache(self, service, request_simples, mock_cache,
-                                       good_response, mock_provider):
+    def test_retorna_resposta_do_cache(
+        self, service, request_simples, mock_cache, good_response, mock_provider
+    ):
         mock_cache.get.return_value = good_response
         resposta = service.execute(request_simples)
         assert resposta is good_response
         mock_provider.generate.assert_not_called()
 
-    def test_cache_hit_nao_chama_router(self, service, request_simples, mock_cache,
-                                         mock_router, good_response):
+    def test_cache_hit_nao_chama_router(
+        self, service, request_simples, mock_cache, mock_router, good_response
+    ):
         mock_cache.get.return_value = good_response
         service.execute(request_simples)
         mock_router.route.assert_not_called()
 
-    def test_cache_hit_nao_chama_rate_limiter_record(self, service, request_simples,
-                                                      mock_cache, mock_rate_limiter,
-                                                      good_response):
+    def test_cache_hit_nao_chama_rate_limiter_record(
+        self, service, request_simples, mock_cache, mock_rate_limiter, good_response
+    ):
         mock_cache.get.return_value = good_response
         service.execute(request_simples)
         # allow_request é chamado antes do cache check
@@ -161,9 +170,9 @@ class TestAIServiceCacheHit:
 
 # ─── Erros e Fallback ──────────────────────────────────────────────────────────
 
+
 class TestAIServiceErros:
-    def test_rate_limit_excedido_lanca_excecao(self, service, request_simples,
-                                                mock_rate_limiter):
+    def test_rate_limit_excedido_lanca_excecao(self, service, request_simples, mock_rate_limiter):
         mock_rate_limiter.allow_request.return_value = False
         with pytest.raises(Exception, match=r"[Rr]ate limit"):
             service.execute(request_simples)
@@ -173,10 +182,9 @@ class TestAIServiceErros:
         with pytest.raises(ValueError, match="Prompt inválido"):
             service.execute(request_simples)
 
-    def test_todos_providers_falham_lanca_runtime_error(self, mock_policy,
-                                                          mock_rate_limiter,
-                                                          mock_cache,
-                                                          mock_observability):
+    def test_todos_providers_falham_lanca_runtime_error(
+        self, mock_policy, mock_rate_limiter, mock_cache, mock_observability
+    ):
         provider_a = MagicMock(spec=AIProvider)
         provider_a.generate.side_effect = ConnectionError("Timeout")
         provider_a.get_metadata.return_value = AIProviderMetadata(name="prov_a")
@@ -198,10 +206,12 @@ class TestAIServiceErros:
         with pytest.raises(RuntimeError, match="All providers failed"):
             svc.execute(AIRequest(prompt="Teste"))
 
-    def test_fallback_usa_segundo_provider(self, mock_policy, mock_rate_limiter,
-                                            mock_cache, mock_observability):
-        fallback_resp = AIResponse(provider_name="prov_b", tokens_used=10,
-                                   output="Resposta do fallback")
+    def test_fallback_usa_segundo_provider(
+        self, mock_policy, mock_rate_limiter, mock_cache, mock_observability
+    ):
+        fallback_resp = AIResponse(
+            provider_name="prov_b", tokens_used=10, output="Resposta do fallback"
+        )
 
         provider_a = MagicMock(spec=AIProvider)
         provider_a.generate.side_effect = ConnectionError("Timeout")
@@ -225,8 +235,9 @@ class TestAIServiceErros:
         assert resp.provider_name == "prov_b"
         assert resp.output == "Resposta do fallback"
 
-    def test_erro_provider_loggado_na_observability(self, mock_policy, mock_rate_limiter,
-                                                      mock_cache, mock_observability):
+    def test_erro_provider_loggado_na_observability(
+        self, mock_policy, mock_rate_limiter, mock_cache, mock_observability
+    ):
         provider = MagicMock(spec=AIProvider)
         provider.generate.side_effect = ConnectionError("Falhou")
         provider.get_metadata.return_value = AIProviderMetadata(name="prov_falho")
@@ -251,9 +262,11 @@ class TestAIServiceErros:
 
 # ─── Streaming ─────────────────────────────────────────────────────────────────
 
+
 class TestAIServiceStreaming:
-    def test_streaming_retorna_generator(self, mock_policy, mock_rate_limiter,
-                                          mock_cache, mock_observability):
+    def test_streaming_retorna_generator(
+        self, mock_policy, mock_rate_limiter, mock_cache, mock_observability
+    ):
         chunk1 = AIResponse(provider_name="mock", output="Olá", is_streaming_chunk=True)
         chunk2 = AIResponse(provider_name="mock", output=" mundo", is_streaming_chunk=True)
 
@@ -283,9 +296,11 @@ class TestAIServiceStreaming:
 
 # ─── Tool Calls ────────────────────────────────────────────────────────────────
 
+
 class TestAIServiceToolCalls:
-    def test_tool_calls_registrados_na_observability(self, service, request_simples,
-                                                      mock_provider, mock_observability):
+    def test_tool_calls_registrados_na_observability(
+        self, service, request_simples, mock_provider, mock_observability
+    ):
         resp_com_tools = AIResponse(
             provider_name="mock",
             tokens_used=30,

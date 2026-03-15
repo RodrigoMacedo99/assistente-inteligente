@@ -3,6 +3,7 @@ Testes de integração com Ollama (local).
 Só rodam se o Ollama estiver disponível em localhost:11434.
 Execute com: pytest tests/integration/ -v -m integration
 """
+
 import pytest
 import requests
 

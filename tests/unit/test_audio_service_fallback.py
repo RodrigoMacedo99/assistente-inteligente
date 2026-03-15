@@ -10,6 +10,7 @@ Cobre:
   - fallback_chain no AudioResponse reflete o histórico de tentativas
   - Saúde é refletida no status()
 """
+
 import time
 from unittest.mock import MagicMock
 
@@ -19,6 +20,7 @@ from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _tts(name: str, available: bool = True, fail: bool = False) -> MagicMock:
     p = MagicMock()
@@ -52,6 +54,7 @@ _STT_REQ = AudioRequest(audio_data=b"audio", audio_format="wav")
 
 
 # ── ProviderHealth unit tests ─────────────────────────────────────────────────
+
 
 class TestProviderHealth:
     def test_initial_state(self):
@@ -105,10 +108,16 @@ class TestProviderHealth:
     def test_to_dict_structure(self):
         h = ProviderHealth(name="p1")
         d = h.to_dict()
-        assert set(d.keys()) == {"consecutive_failures", "total_failures", "total_successes", "circuit_open"}
+        assert set(d.keys()) == {
+            "consecutive_failures",
+            "total_failures",
+            "total_successes",
+            "circuit_open",
+        }
 
 
 # ── Retry por provider ────────────────────────────────────────────────────────
+
 
 class TestRetryPerProvider:
     def test_tts_retries_before_fallback(self):
@@ -152,6 +161,7 @@ class TestRetryPerProvider:
 
 
 # ── Circuit breaker ───────────────────────────────────────────────────────────
+
 
 class TestCircuitBreaker:
     def test_tts_circuit_opens_after_threshold_and_skips_provider(self):
@@ -218,6 +228,7 @@ class TestCircuitBreaker:
 
 # ── fallback_chain no AudioResponse ──────────────────────────────────────────
 
+
 class TestFallbackChain:
     def test_tts_chain_has_single_success_entry(self):
         p1 = _tts("pyttsx3")
@@ -275,6 +286,7 @@ class TestFallbackChain:
 
 
 # ── Health refletida no status() ─────────────────────────────────────────────
+
 
 class TestStatusWithHealth:
     def test_status_reflects_failures(self):

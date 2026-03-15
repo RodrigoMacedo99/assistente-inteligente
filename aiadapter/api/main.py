@@ -97,8 +97,12 @@ def _build_audio_service() -> AudioService:
         stt_providers.append(OpenAISTTProvider(api_key=settings.openai_api_key))
 
     svc = AudioService(tts_providers=tts_providers, stt_providers=stt_providers)
-    logger.info(f"[AUDIO] Providers TTS: {[p.get_name() for p in tts_providers if p.is_available()]}")
-    logger.info(f"[AUDIO] Providers STT: {[p.get_name() for p in stt_providers if p.is_available()]}")
+    logger.info(
+        f"[AUDIO] Providers TTS: {[p.get_name() for p in tts_providers if p.is_available()]}"
+    )
+    logger.info(
+        f"[AUDIO] Providers STT: {[p.get_name() for p in stt_providers if p.is_available()]}"
+    )
     return svc
 
 
@@ -189,16 +193,22 @@ def _build_providers() -> dict:
 
     if settings.openai_api_key:
         from openai import OpenAI
+
         providers["openai"] = OpenAIProvider(client=OpenAI(api_key=settings.openai_api_key))
         logger.info("[INIT] OpenAI provider ativo")
 
     if settings.anthropic_api_key:
         from anthropic import Anthropic
-        providers["anthropic"] = ClaudeProvider(client=Anthropic(api_key=settings.anthropic_api_key))
+
+        providers["anthropic"] = ClaudeProvider(
+            client=Anthropic(api_key=settings.anthropic_api_key)
+        )
         logger.info("[INIT] Anthropic provider ativo")
 
     if not providers:
-        logger.warning("[INIT] Nenhum provider configurado! Configure ao menos uma API key ou inicie o Ollama.")
+        logger.warning(
+            "[INIT] Nenhum provider configurado! Configure ao menos uma API key ou inicie o Ollama."
+        )
 
     return providers
 
@@ -304,22 +314,26 @@ async def _stream_generator(ai_service: AIService, request: AIRequest):
         if hasattr(response_or_gen, "__iter__") and not isinstance(response_or_gen, str):
             for chunk in response_or_gen:
                 quota_manager.record_request(chunk.provider_name)
-                yield json.dumps({
-                    "output": chunk.output,
-                    "tokens_used": chunk.tokens_used,
-                    "provider_name": chunk.provider_name,
-                    "cost": chunk.cost,
-                    "is_streaming_chunk": chunk.is_streaming_chunk,
-                }).encode() + b"\n"
+                yield json.dumps(
+                    {
+                        "output": chunk.output,
+                        "tokens_used": chunk.tokens_used,
+                        "provider_name": chunk.provider_name,
+                        "cost": chunk.cost,
+                        "is_streaming_chunk": chunk.is_streaming_chunk,
+                    }
+                ).encode() + b"\n"
         else:
             quota_manager.record_request(response_or_gen.provider_name)
-            yield json.dumps({
-                "output": response_or_gen.output,
-                "tokens_used": response_or_gen.tokens_used,
-                "provider_name": response_or_gen.provider_name,
-                "cost": response_or_gen.cost,
-                "is_streaming_chunk": False,
-            }).encode() + b"\n"
+            yield json.dumps(
+                {
+                    "output": response_or_gen.output,
+                    "tokens_used": response_or_gen.tokens_used,
+                    "provider_name": response_or_gen.provider_name,
+                    "cost": response_or_gen.cost,
+                    "is_streaming_chunk": False,
+                }
+            ).encode() + b"\n"
     except Exception as e:
         logger.error(f"Erro no stream: {e}", exc_info=True)
         yield json.dumps({"error": str(e)}).encode() + b"\n"
@@ -334,15 +348,17 @@ async def list_models(tenant_id: str = Depends(get_tenant_id)):
         for provider in providers.values():
             meta = provider.get_metadata()
             for model in meta.models:
-                models.append({
-                    "id": model,
-                    "provider": meta.name,
-                    "supports_streaming": meta.supports_streaming,
-                    "cost_per_1k_tokens": meta.cost_per_1k_tokens,
-                    "is_free": meta.cost_per_1k_tokens == 0.0 or ":free" in model,
-                    "is_local": meta.is_local,
-                    "capabilities": meta.capabilities,
-                })
+                models.append(
+                    {
+                        "id": model,
+                        "provider": meta.name,
+                        "supports_streaming": meta.supports_streaming,
+                        "cost_per_1k_tokens": meta.cost_per_1k_tokens,
+                        "is_free": meta.cost_per_1k_tokens == 0.0 or ":free" in model,
+                        "is_local": meta.is_local,
+                        "capabilities": meta.capabilities,
+                    }
+                )
         return {"models": models, "total": len(models)}
     except Exception as e:
         logger.error(f"Erro em list_models: {e}")
@@ -368,6 +384,7 @@ async def get_tenant_stats(tenant_id: str):
 
 # ─── Voice Routes ─────────────────────────────────────────────────────────────
 
+
 @app.post(
     "/v1/speak",
     summary="Síntese de voz (TTS)",
@@ -381,7 +398,10 @@ async def text_to_speech(
     text: str = Form(..., description="Texto a ser sintetizado"),
     voice: str | None = Form(default=None, description="Nome ou ID da voz"),
     speed: float = Form(default=1.0, ge=0.25, le=4.0, description="Velocidade da fala"),
-    preferred_provider: str | None = Form(default=None, description="Provider preferido (pyttsx3, edge_tts, elevenlabs_tts, openai_tts)"),
+    preferred_provider: str | None = Form(
+        default=None,
+        description="Provider preferido (pyttsx3, edge_tts, elevenlabs_tts, openai_tts)",
+    ),
 ):
     try:
         audio_svc = get_audio_service()
@@ -429,8 +449,12 @@ async def text_to_speech(
 )
 async def speech_to_text(
     file: UploadFile = File(..., description="Arquivo de áudio (wav, mp3, m4a, webm)"),
-    language: str | None = Form(default=None, description="Código do idioma (ex: pt, en). None = auto-detect"),
-    preferred_provider: str | None = Form(default=None, description="Provider preferido (whisper_local, groq_stt, openai_stt)"),
+    language: str | None = Form(
+        default=None, description="Código do idioma (ex: pt, en). None = auto-detect"
+    ),
+    preferred_provider: str | None = Form(
+        default=None, description="Provider preferido (whisper_local, groq_stt, openai_stt)"
+    ),
 ):
     try:
         audio_data = await file.read()
@@ -502,16 +526,20 @@ async def transcribe_stream(websocket: WebSocket):
             if "bytes" in msg:
                 chunks.append(msg["bytes"])
                 # Envia ACK a cada chunk recebido
-                await websocket.send_json({"status": "chunk_received", "total_bytes": sum(len(c) for c in chunks)})
+                await websocket.send_json(
+                    {"status": "chunk_received", "total_bytes": sum(len(c) for c in chunks)}
+                )
 
             elif "text" in msg:
                 import json as _json
+
                 data = _json.loads(msg["text"])
                 if data.get("done"):
                     # Processa áudio acumulado
                     if chunks:
                         import io
                         import wave
+
                         raw_audio = b"".join(chunks)
                         buf = io.BytesIO()
                         with wave.open(buf, "wb") as wf:
@@ -521,16 +549,20 @@ async def transcribe_stream(websocket: WebSocket):
                             wf.writeframes(raw_audio)
                         wav_bytes = buf.getvalue()
 
-                        request = AudioRequest(audio_data=wav_bytes, audio_format="wav", language=data.get("language"))
+                        request = AudioRequest(
+                            audio_data=wav_bytes, audio_format="wav", language=data.get("language")
+                        )
                         try:
                             response = audio_svc.transcribe(request)
-                            await websocket.send_json({
-                                "transcription": response.transcription,
-                                "language_detected": response.language_detected,
-                                "segments": response.segments,
-                                "provider": response.provider_name,
-                                "final": True,
-                            })
+                            await websocket.send_json(
+                                {
+                                    "transcription": response.transcription,
+                                    "language_detected": response.language_detected,
+                                    "segments": response.segments,
+                                    "provider": response.provider_name,
+                                    "final": True,
+                                }
+                            )
                         except Exception as e:
                             await websocket.send_json({"error": str(e), "final": True})
                     else:
@@ -547,4 +579,5 @@ async def transcribe_stream(websocket: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host=settings.host, port=settings.port, log_level=settings.log_level.lower())

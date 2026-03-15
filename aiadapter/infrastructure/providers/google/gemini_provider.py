@@ -15,12 +15,14 @@ class GeminiProvider(AIProvider):
         try:
             from google import genai
             from google.genai import types as genai_types
+
             self._genai = genai
             self._types = genai_types
             self._client = genai.Client(api_key=api_key)
         except ImportError:
             # Fallback para SDK legado
             import google.generativeai as genai_legacy
+
             genai_legacy.configure(api_key=api_key)
             self._genai = None
             self._genai_legacy = genai_legacy
@@ -34,7 +36,9 @@ class GeminiProvider(AIProvider):
         else:
             return self._generate_legacy_sdk(request, model)
 
-    def _generate_new_sdk(self, request: AIRequest, model: str) -> AIResponse | Generator[AIResponse, None, None]:
+    def _generate_new_sdk(
+        self, request: AIRequest, model: str
+    ) -> AIResponse | Generator[AIResponse, None, None]:
         contents = []
         if request.messages:
             for msg in request.messages:
@@ -68,7 +72,9 @@ class GeminiProvider(AIProvider):
             cost=self._estimate_cost(model, tokens),
         )
 
-    def _generate_stream_new(self, model: str, contents, config) -> Generator[AIResponse, None, None]:
+    def _generate_stream_new(
+        self, model: str, contents, config
+    ) -> Generator[AIResponse, None, None]:
         for chunk in self._client.models.generate_content_stream(
             model=model,
             contents=contents,
@@ -83,7 +89,9 @@ class GeminiProvider(AIProvider):
                     is_streaming_chunk=True,
                 )
 
-    def _generate_legacy_sdk(self, request: AIRequest, model: str) -> AIResponse | Generator[AIResponse, None, None]:
+    def _generate_legacy_sdk(
+        self, request: AIRequest, model: str
+    ) -> AIResponse | Generator[AIResponse, None, None]:
         client = self._genai_legacy.GenerativeModel(model)
         formatted = []
         if request.messages:

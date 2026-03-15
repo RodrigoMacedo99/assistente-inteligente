@@ -1,6 +1,7 @@
 """
 Testes do SimplePolicy — validação de requisições.
 """
+
 import pytest
 
 from aiadapter.core.entities.airequest import AIRequest

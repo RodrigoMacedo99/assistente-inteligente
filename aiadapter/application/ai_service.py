@@ -58,7 +58,7 @@ class AIService:
             try:
                 selected_provider_name = provider.get_metadata().name
                 response_or_generator = provider.generate(request)
-                if response_or_generator: # Se houver resposta ou gerador, sai do loop
+                if response_or_generator:  # Se houver resposta ou gerador, sai do loop
                     break
             except Exception as e:
                 self._observability.log_error(f"Provider {selected_provider_name} failed: {e}")
@@ -68,7 +68,9 @@ class AIService:
             raise RuntimeError("All providers failed to generate a response.")
 
         if request.stream:
-            return self._handle_streaming_response(request, response_or_generator, selected_provider_name)
+            return self._handle_streaming_response(
+                request, response_or_generator, selected_provider_name
+            )
         else:
             response = response_or_generator
             if response.tool_calls:
@@ -84,7 +86,9 @@ class AIService:
             self._observability.log_response(response)
             return response
 
-    def _handle_streaming_response(self, request: AIRequest, generator: Generator[AIResponse, None, None], provider_name: str) -> Generator[AIResponse, None, None]:
+    def _handle_streaming_response(
+        self, request: AIRequest, generator: Generator[AIResponse, None, None], provider_name: str
+    ) -> Generator[AIResponse, None, None]:
         full_response_content = ""
         total_tokens = 0
         for chunk in generator:
@@ -96,10 +100,10 @@ class AIService:
         # After streaming, create a full response for caching and logging
         final_response = AIResponse(
             output=full_response_content,
-            tokens_used=total_tokens, # Placeholder, actual calculation might be more complex
+            tokens_used=total_tokens,  # Placeholder, actual calculation might be more complex
             provider_name=provider_name,
-            cost=0.0, # Placeholder, actual calculation might be more complex
-            is_streaming_chunk=False
+            cost=0.0,  # Placeholder, actual calculation might be more complex
+            is_streaming_chunk=False,
         )
         self._cache.set(request, final_response)
         self._observability.log_response(final_response)
@@ -119,5 +123,7 @@ class AIService:
                     tool_outputs.append({"tool_call_id": tool_call["id"], "error": str(e)})
             else:
                 self._observability.log_error(f"Tool {function_name} not found.")
-                tool_outputs.append({"tool_call_id": tool_call["id"], "error": f"Tool {function_name} not found."})
+                tool_outputs.append(
+                    {"tool_call_id": tool_call["id"], "error": f"Tool {function_name} not found."}
+                )
         return tool_outputs

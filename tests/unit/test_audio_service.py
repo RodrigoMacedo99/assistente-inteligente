@@ -1,4 +1,5 @@
 """Testes do AudioService — orquestrador TTS/STT."""
+
 from unittest.mock import MagicMock
 
 import pytest

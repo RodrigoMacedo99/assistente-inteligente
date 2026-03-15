@@ -18,6 +18,7 @@ Vozes padrão notáveis:
 
 Instalação: pip install elevenlabs
 """
+
 import logging
 
 from aiadapter.core.entities.audiorequest import AudioRequest
@@ -31,15 +32,69 @@ DEFAULT_MODEL_ID = "eleven_multilingual_v2"
 
 # Vozes pré-configuradas da ElevenLabs com suporte multilingual
 ELEVENLABS_VOICES = [
-    {"name": "Rachel",  "id": "21m00Tcm4TlvDq8ikWAM", "gender": "female", "language": "multilingual", "style": "narrative"},
-    {"name": "Domi",    "id": "AZnzlk1XvdvUeBnXmlld", "gender": "female", "language": "multilingual", "style": "strong"},
-    {"name": "Bella",   "id": "EXAVITQu4vr4xnSDxMaL", "gender": "female", "language": "multilingual", "style": "soft"},
-    {"name": "Antoni",  "id": "ErXwobaYiN019PkySvjV", "gender": "male",   "language": "multilingual", "style": "well-rounded"},
-    {"name": "Elli",    "id": "MF3mGyEYCl7XYWbV9V6O", "gender": "female", "language": "multilingual", "style": "emotional"},
-    {"name": "Josh",    "id": "TxGEqnHWrfWFTfGW9XjX", "gender": "male",   "language": "multilingual", "style": "young"},
-    {"name": "Arnold",  "id": "VR6AewLTigWG4xSOukaG", "gender": "male",   "language": "multilingual", "style": "crisp"},
-    {"name": "Adam",    "id": "pNInz6obpgDQGcFmaJgB", "gender": "male",   "language": "multilingual", "style": "deep"},
-    {"name": "Sam",     "id": "yoZ06aMxZJJ28mfd3POQ", "gender": "male",   "language": "multilingual", "style": "raspy"},
+    {
+        "name": "Rachel",
+        "id": "21m00Tcm4TlvDq8ikWAM",
+        "gender": "female",
+        "language": "multilingual",
+        "style": "narrative",
+    },
+    {
+        "name": "Domi",
+        "id": "AZnzlk1XvdvUeBnXmlld",
+        "gender": "female",
+        "language": "multilingual",
+        "style": "strong",
+    },
+    {
+        "name": "Bella",
+        "id": "EXAVITQu4vr4xnSDxMaL",
+        "gender": "female",
+        "language": "multilingual",
+        "style": "soft",
+    },
+    {
+        "name": "Antoni",
+        "id": "ErXwobaYiN019PkySvjV",
+        "gender": "male",
+        "language": "multilingual",
+        "style": "well-rounded",
+    },
+    {
+        "name": "Elli",
+        "id": "MF3mGyEYCl7XYWbV9V6O",
+        "gender": "female",
+        "language": "multilingual",
+        "style": "emotional",
+    },
+    {
+        "name": "Josh",
+        "id": "TxGEqnHWrfWFTfGW9XjX",
+        "gender": "male",
+        "language": "multilingual",
+        "style": "young",
+    },
+    {
+        "name": "Arnold",
+        "id": "VR6AewLTigWG4xSOukaG",
+        "gender": "male",
+        "language": "multilingual",
+        "style": "crisp",
+    },
+    {
+        "name": "Adam",
+        "id": "pNInz6obpgDQGcFmaJgB",
+        "gender": "male",
+        "language": "multilingual",
+        "style": "deep",
+    },
+    {
+        "name": "Sam",
+        "id": "yoZ06aMxZJJ28mfd3POQ",
+        "gender": "male",
+        "language": "multilingual",
+        "style": "raspy",
+    },
 ]
 
 # Custo aproximado (tier Creator+): $0.18 por 1k chars
@@ -67,9 +122,12 @@ class ElevenLabsTTSProvider(AITTSProvider):
     def _init_client(self):
         try:
             from elevenlabs.client import ElevenLabs
+
             self._client = ElevenLabs(api_key=self._api_key)
         except ImportError:
-            logger.warning("[ELEVENLABS] elevenlabs SDK não instalado. Execute: pip install elevenlabs")
+            logger.warning(
+                "[ELEVENLABS] elevenlabs SDK não instalado. Execute: pip install elevenlabs"
+            )
 
     def speak(self, request: AudioRequest) -> AudioResponse:
         if not self.is_available():
@@ -84,7 +142,9 @@ class ElevenLabsTTSProvider(AITTSProvider):
 
         cost = (len(request.text) / 1000.0) * COST_PER_1K_CHARS
 
-        logger.info(f"[ELEVENLABS] '{voice_id}': {len(request.text)} chars → {len(audio_bytes)} bytes")
+        logger.info(
+            f"[ELEVENLABS] '{voice_id}': {len(request.text)} chars → {len(audio_bytes)} bytes"
+        )
 
         return AudioResponse(
             provider_name="elevenlabs_tts",

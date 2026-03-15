@@ -5,6 +5,7 @@ O circuit breaker abre automaticamente quando um provider atinge
 `threshold` falhas consecutivas. Após `cooldown_seconds` sem tentativas,
 o circuit fecha novamente (half-open → reset automático na próxima chamada).
 """
+
 from dataclasses import dataclass, field
 import time
 

@@ -4,6 +4,7 @@ Gerenciador de quotas diárias para provedores gratuitos.
 Armazena o consumo diário em um arquivo JSON local.
 Reseta automaticamente no início de cada novo dia.
 """
+
 from datetime import date
 import json
 import logging
@@ -15,12 +16,12 @@ QUOTA_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "
 
 # Limites diários por provedor (requisições)
 DAILY_LIMITS: dict[str, int] = {
-    "gemini": 1500,          # Gemini Free: 1500 req/dia
-    "groq": 14400,           # Groq Free: 14400 req/dia (~10 req/min)
+    "gemini": 1500,  # Gemini Free: 1500 req/dia
+    "groq": 14400,  # Groq Free: 14400 req/dia (~10 req/min)
     "openrouter_free": 200,  # OpenRouter modelos gratuitos: ~200 req/dia
-    "together_free": 300,    # Together AI free tier
-    "cohere": 1000,          # Cohere trial: 1000 req/mês (~33/dia)
-    "mistral": 500,          # Mistral free tier estimado
+    "together_free": 300,  # Together AI free tier
+    "cohere": 1000,  # Cohere trial: 1000 req/mês (~33/dia)
+    "mistral": 500,  # Mistral free tier estimado
 }
 
 

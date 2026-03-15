@@ -13,7 +13,9 @@ class SimpleRateLimiter(AIRateLimiter):
     def allow_request(self, request: AIRequest) -> bool:
         current_time = time.time()
         # Remove requests older than 1 minute
-        self.requests[request.client_id] = [t for t in self.requests[request.client_id] if current_time - t < 60]
+        self.requests[request.client_id] = [
+            t for t in self.requests[request.client_id] if current_time - t < 60
+        ]
         return len(self.requests[request.client_id]) < self.rate_limit_per_minute
 
     def record_request(self, request: AIRequest) -> None:

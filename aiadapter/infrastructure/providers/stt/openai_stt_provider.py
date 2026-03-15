@@ -6,6 +6,7 @@ Custo: $0.006 por minuto de áudio.
 
 Instalação: pip install openai
 """
+
 import logging
 
 from aiadapter.core.entities.audiorequest import AudioRequest
@@ -29,6 +30,7 @@ class OpenAISTTProvider(AISTTProvider):
     def _init_client(self):
         try:
             from openai import OpenAI
+
             self._client = OpenAI(api_key=self._api_key)
         except ImportError:
             logger.warning("[OPENAI-STT] openai SDK não instalado.")

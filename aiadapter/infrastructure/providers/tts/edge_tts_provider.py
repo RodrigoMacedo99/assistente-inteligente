@@ -18,6 +18,7 @@ Vozes pt-PT:
 
 Instalação: pip install edge-tts
 """
+
 import asyncio
 import logging
 
@@ -31,17 +32,22 @@ DEFAULT_VOICE_PT = "pt-BR-FranciscaNeural"
 DEFAULT_VOICE_EN = "en-US-JennyNeural"
 
 VOICES_PT = [
-    {"name": "pt-BR-AntonioNeural",   "gender": "male",   "language": "pt-BR", "style": "general"},
+    {"name": "pt-BR-AntonioNeural", "gender": "male", "language": "pt-BR", "style": "general"},
     {"name": "pt-BR-FranciscaNeural", "gender": "female", "language": "pt-BR", "style": "general"},
-    {"name": "pt-BR-ThalitaNeural",   "gender": "female", "language": "pt-BR", "style": "conversation"},
-    {"name": "pt-PT-DuarteNeural",    "gender": "male",   "language": "pt-PT", "style": "general"},
-    {"name": "pt-PT-RaquelNeural",    "gender": "female", "language": "pt-PT", "style": "general"},
+    {
+        "name": "pt-BR-ThalitaNeural",
+        "gender": "female",
+        "language": "pt-BR",
+        "style": "conversation",
+    },
+    {"name": "pt-PT-DuarteNeural", "gender": "male", "language": "pt-PT", "style": "general"},
+    {"name": "pt-PT-RaquelNeural", "gender": "female", "language": "pt-PT", "style": "general"},
 ]
 
 VOICES_EN = [
-    {"name": "en-US-JennyNeural",  "gender": "female", "language": "en-US", "style": "general"},
-    {"name": "en-US-GuyNeural",    "gender": "male",   "language": "en-US", "style": "general"},
-    {"name": "en-GB-SoniaNeural",  "gender": "female", "language": "en-GB", "style": "general"},
+    {"name": "en-US-JennyNeural", "gender": "female", "language": "en-US", "style": "general"},
+    {"name": "en-US-GuyNeural", "gender": "male", "language": "en-US", "style": "general"},
+    {"name": "en-GB-SoniaNeural", "gender": "female", "language": "en-GB", "style": "general"},
 ]
 
 
@@ -58,6 +64,7 @@ class EdgeTTSProvider(AITTSProvider):
     def _check_available(self) -> bool:
         try:
             import edge_tts  # noqa: F401
+
             return True
         except ImportError:
             logger.warning("[EDGE-TTS] edge-tts não instalado. Execute: pip install edge-tts")
@@ -121,6 +128,7 @@ class EdgeTTSProvider(AITTSProvider):
         """Lista TODAS as vozes disponíveis diretamente da API da Microsoft."""
         try:
             import edge_tts
+
             voices = await edge_tts.list_voices()
             return [
                 {

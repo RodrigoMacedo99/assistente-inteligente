@@ -5,6 +5,7 @@ Modelos: mistral-small, mistral-medium, mistral-large, open-mistral (gratuito)
 
 API compatível com OpenAI SDK via base_url.
 """
+
 from collections.abc import Generator
 
 from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
@@ -35,10 +36,12 @@ class MistralProvider(AIProvider):
     def __init__(self, api_key: str):
         try:
             from mistralai import Mistral
+
             self._client = Mistral(api_key=api_key)
             self._use_sdk = True
         except ImportError:
             from openai import OpenAI
+
             self._client = OpenAI(
                 api_key=api_key,
                 base_url="https://api.mistral.ai/v1",
@@ -54,7 +57,9 @@ class MistralProvider(AIProvider):
         else:
             return self._generate_openai_compat(request, model, messages)
 
-    def _generate_sdk(self, request: AIRequest, model: str, messages: list) -> AIResponse | Generator:
+    def _generate_sdk(
+        self, request: AIRequest, model: str, messages: list
+    ) -> AIResponse | Generator:
         if request.stream:
             return self._stream_sdk(model, messages, request)
 
@@ -89,7 +94,9 @@ class MistralProvider(AIProvider):
                         is_streaming_chunk=True,
                     )
 
-    def _generate_openai_compat(self, request: AIRequest, model: str, messages: list) -> AIResponse | Generator:
+    def _generate_openai_compat(
+        self, request: AIRequest, model: str, messages: list
+    ) -> AIResponse | Generator:
         kwargs = {
             "model": model,
             "messages": messages,

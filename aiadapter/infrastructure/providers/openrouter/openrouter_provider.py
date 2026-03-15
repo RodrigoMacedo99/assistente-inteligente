@@ -13,6 +13,7 @@ Modelos gratuitos disponíveis (sem custo):
 
 Free tier: ~200 req/dia com modelos gratuitos, sem cartão de crédito.
 """
+
 from collections.abc import Generator
 
 from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
@@ -52,8 +53,11 @@ class OpenRouterProvider(AIProvider):
     Prioriza modelos gratuitos por padrão.
     """
 
-    def __init__(self, api_key: str, site_url: str = "http://localhost", site_name: str = "AI Adapter"):
+    def __init__(
+        self, api_key: str, site_url: str = "http://localhost", site_name: str = "AI Adapter"
+    ):
         from openai import OpenAI
+
         self._client = OpenAI(
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",

@@ -16,7 +16,7 @@ class SimpleAgent(BaseAgent):
         system_prompt: str | None = None,
         model: str = "gpt-4o",
         temperature: float = 0.7,
-        max_tokens: int = 512
+        max_tokens: int = 512,
     ):
         super().__init__(name, ai_service, system_prompt)
         self.model = model
@@ -39,7 +39,7 @@ class SimpleAgent(BaseAgent):
             messages=messages,
             temperature=self.temperature,
             max_tokens=self.max_tokens,
-            context={"agent_name": self.name}
+            context={"agent_name": self.name},
         )
 
         # Execute request

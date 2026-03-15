@@ -14,6 +14,7 @@ Instalação:
   # Linux (para suporte a áudio com ffmpeg):
   sudo apt-get install ffmpeg
 """
+
 import logging
 import os
 import tempfile
@@ -84,18 +85,20 @@ class WhisperLocalProvider(AISTTProvider):
                 language=language,
                 beam_size=5,
                 word_timestamps=False,
-                vad_filter=True,           # Remove silêncio automaticamente
+                vad_filter=True,  # Remove silêncio automaticamente
                 vad_parameters={"min_silence_duration_ms": 500},
             )
 
             segments = []
             full_text_parts = []
             for seg in segments_iter:
-                segments.append({
-                    "start": round(seg.start, 2),
-                    "end": round(seg.end, 2),
-                    "text": seg.text.strip(),
-                })
+                segments.append(
+                    {
+                        "start": round(seg.start, 2),
+                        "end": round(seg.end, 2),
+                        "text": seg.text.strip(),
+                    }
+                )
                 full_text_parts.append(seg.text.strip())
 
             transcription = " ".join(full_text_parts)

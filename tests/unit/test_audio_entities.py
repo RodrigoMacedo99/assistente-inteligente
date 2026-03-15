@@ -1,4 +1,5 @@
 """Testes das entidades AudioRequest e AudioResponse."""
+
 import pytest
 
 from aiadapter.core.entities.audiorequest import AudioRequest

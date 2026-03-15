@@ -17,6 +17,7 @@ Prioridade de providers (ordem padrão de preferência):
   TTS: local (pyttsx3) → gratuito (edge-tts) → pago barato (elevenlabs) → pago (openai-tts)
   STT: local (faster-whisper) → gratuito (groq-whisper) → pago (openai-whisper)
 """
+
 import logging
 
 from aiadapter.application.provider_health import ProviderHealth
@@ -28,7 +29,7 @@ from aiadapter.core.interfaces.tts_provider import AITTSProvider
 logger = logging.getLogger("aiadapter.audio_service")
 
 _DEFAULT_MAX_RETRIES = 1
-_DEFAULT_CIRCUIT_THRESHOLD = 3    # falhas consecutivas para abrir o circuit
+_DEFAULT_CIRCUIT_THRESHOLD = 3  # falhas consecutivas para abrir o circuit
 _DEFAULT_CIRCUIT_COOLDOWN = 60.0  # segundos que o circuit permanece aberto
 
 
@@ -105,7 +106,9 @@ class AudioService:
 
             for attempt in range(1, self._max_retries + 1):
                 try:
-                    logger.info(f"[AUDIO-SVC] TTS via '{name}' (tentativa {attempt}/{self._max_retries})")
+                    logger.info(
+                        f"[AUDIO-SVC] TTS via '{name}' (tentativa {attempt}/{self._max_retries})"
+                    )
                     response = provider.speak(request)
                     health.record_success()
                     fallback_chain.append({"provider": name, "attempt": attempt, "success": True})
@@ -116,16 +119,16 @@ class AudioService:
                     last_error = e
                     if attempt == self._max_retries:
                         health.record_failure(self._circuit_cooldown, self._circuit_threshold)
-                        fallback_chain.append({
-                            "provider": name,
-                            "attempts": attempt,
-                            "success": False,
-                            "error": str(e),
-                        })
+                        fallback_chain.append(
+                            {
+                                "provider": name,
+                                "attempts": attempt,
+                                "success": False,
+                                "error": str(e),
+                            }
+                        )
 
-        raise RuntimeError(
-            f"Todos os providers TTS falharam. Último erro: {last_error}"
-        )
+        raise RuntimeError(f"Todos os providers TTS falharam. Último erro: {last_error}")
 
     def list_tts_voices(self, language: str = "pt") -> list[dict]:
         """Retorna vozes disponíveis de todos os providers TTS ativos."""
@@ -167,7 +170,9 @@ class AudioService:
 
             for attempt in range(1, self._max_retries + 1):
                 try:
-                    logger.info(f"[AUDIO-SVC] STT via '{name}' (tentativa {attempt}/{self._max_retries})")
+                    logger.info(
+                        f"[AUDIO-SVC] STT via '{name}' (tentativa {attempt}/{self._max_retries})"
+                    )
                     response = provider.transcribe(request)
                     health.record_success()
                     fallback_chain.append({"provider": name, "attempt": attempt, "success": True})
@@ -178,16 +183,16 @@ class AudioService:
                     last_error = e
                     if attempt == self._max_retries:
                         health.record_failure(self._circuit_cooldown, self._circuit_threshold)
-                        fallback_chain.append({
-                            "provider": name,
-                            "attempts": attempt,
-                            "success": False,
-                            "error": str(e),
-                        })
+                        fallback_chain.append(
+                            {
+                                "provider": name,
+                                "attempts": attempt,
+                                "success": False,
+                                "error": str(e),
+                            }
+                        )
 
-        raise RuntimeError(
-            f"Todos os providers STT falharam. Último erro: {last_error}"
-        )
+        raise RuntimeError(f"Todos os providers STT falharam. Último erro: {last_error}")
 
     # ── Provider selection ────────────────────────────────────────────────────
 

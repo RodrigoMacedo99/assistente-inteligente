@@ -1,6 +1,7 @@
 """
 Testes do DailyQuotaManager — quotas diárias com reset automático.
 """
+
 from datetime import date, timedelta
 import json
 import os

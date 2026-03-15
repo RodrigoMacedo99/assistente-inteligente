@@ -13,6 +13,7 @@ Instalação:
   pip install pyttsx3
   sudo apt-get install espeak espeak-ng  # Linux
 """
+
 import logging
 import os
 import tempfile
@@ -44,6 +45,7 @@ class Pyttsx3TTSProvider(AITTSProvider):
     def _init_engine(self):
         try:
             import pyttsx3
+
             self._engine = pyttsx3.init()
             self._engine.setProperty("rate", self._rate)
             self._engine.setProperty("volume", self._volume)
@@ -86,7 +88,7 @@ class Pyttsx3TTSProvider(AITTSProvider):
 
             # Estimativa de duração: ~150 palavras/min com taxa padrão
             words = len(request.text.split())
-            duration = (words / (self._rate / 60.0))
+            duration = words / (self._rate / 60.0)
 
             logger.info(f"[PYTTSX3] Síntese: {len(request.text)} chars → {len(audio_bytes)} bytes")
 
@@ -115,10 +117,12 @@ class Pyttsx3TTSProvider(AITTSProvider):
         for v in voices:
             vid = (v.id or "").lower()
             if language.lower() in vid:
-                result.append({
-                    "name": v.name or v.id,
-                    "id": v.id,
-                    "gender": "unknown",
-                    "language": language,
-                })
+                result.append(
+                    {
+                        "name": v.name or v.id,
+                        "id": v.id,
+                        "gender": "unknown",
+                        "language": language,
+                    }
+                )
         return result

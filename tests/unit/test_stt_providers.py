@@ -1,4 +1,5 @@
 """Testes unitários para providers STT (sem chamadas de rede)."""
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,6 +14,7 @@ class TestWhisperLocalSTTProvider:
         from aiadapter.infrastructure.providers.stt.whisper_local_provider import (
             WhisperLocalProvider,
         )
+
         with patch.object(WhisperLocalProvider, "_try_load"):
             p = WhisperLocalProvider(model_size=model_size)
         return p
@@ -48,6 +50,7 @@ class TestWhisperLocalSTTProvider:
         from aiadapter.infrastructure.providers.stt.whisper_local_provider import (
             WhisperLocalProvider,
         )
+
         with patch.object(WhisperLocalProvider, "_try_load"):
             p = WhisperLocalProvider()
 
@@ -62,8 +65,7 @@ class TestWhisperLocalSTTProvider:
 
         p._model.transcribe.return_value = ([mock_segment], mock_info)
 
-        with patch("tempfile.NamedTemporaryFile") as mock_tmp, \
-             patch("os.unlink"):
+        with patch("tempfile.NamedTemporaryFile") as mock_tmp, patch("os.unlink"):
             mock_tmp.return_value.__enter__.return_value.name = "/tmp/test.wav"
             resp = p.transcribe(AudioRequest(audio_data=b"fake_wav", audio_format="wav"))
 
@@ -91,6 +93,7 @@ class TestGroqSTTProvider:
 
     def _make_provider(self):
         from aiadapter.infrastructure.providers.stt.groq_stt_provider import GroqSTTProvider
+
         with patch("groq.Groq"):
             p = GroqSTTProvider(api_key="gsk_test123")
         return p
@@ -101,12 +104,14 @@ class TestGroqSTTProvider:
 
     def test_is_available_false_without_key(self):
         from aiadapter.infrastructure.providers.stt.groq_stt_provider import GroqSTTProvider
+
         with patch("groq.Groq"):
             p = GroqSTTProvider(api_key="")
         assert not p.is_available()
 
     def test_is_available_false_on_import_error(self):
         from aiadapter.infrastructure.providers.stt.groq_stt_provider import GroqSTTProvider
+
         with patch.object(GroqSTTProvider, "_init_client"):
             p = GroqSTTProvider.__new__(GroqSTTProvider)
             p._api_key = "key"
@@ -158,6 +163,7 @@ class TestOpenAISTTProvider:
 
     def _make_provider(self):
         from aiadapter.infrastructure.providers.stt.openai_stt_provider import OpenAISTTProvider
+
         with patch("openai.OpenAI"):
             p = OpenAISTTProvider(api_key="sk-test")
         return p
@@ -172,6 +178,7 @@ class TestOpenAISTTProvider:
 
     def test_is_available_false_without_key(self):
         from aiadapter.infrastructure.providers.stt.openai_stt_provider import OpenAISTTProvider
+
         with patch("openai.OpenAI"):
             p = OpenAISTTProvider(api_key="")
         assert not p.is_available()
