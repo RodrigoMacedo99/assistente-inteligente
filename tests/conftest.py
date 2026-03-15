@@ -1,17 +1,18 @@
 """
 Fixtures compartilhadas entre todos os testes.
 """
-import pytest
+
 from unittest.mock import MagicMock
 
+import pytest
+
+from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
-from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.interfaces.provider import AIProvider
-from aiadapter.core.enums.aicapability import AICapability
-
 
 # ─── Entidades base ────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def sample_request() -> AIRequest:
@@ -52,16 +53,32 @@ def sample_response() -> AIResponse:
 @pytest.fixture
 def streaming_chunks() -> list[AIResponse]:
     return [
-        AIResponse(provider_name="mock_provider", tokens_used=0, cost=0.0,
-                   output="Brasília", is_streaming_chunk=True),
-        AIResponse(provider_name="mock_provider", tokens_used=0, cost=0.0,
-                   output=" é a capital", is_streaming_chunk=True),
-        AIResponse(provider_name="mock_provider", tokens_used=0, cost=0.0,
-                   output=" do Brasil.", is_streaming_chunk=True),
+        AIResponse(
+            provider_name="mock_provider",
+            tokens_used=0,
+            cost=0.0,
+            output="Brasília",
+            is_streaming_chunk=True,
+        ),
+        AIResponse(
+            provider_name="mock_provider",
+            tokens_used=0,
+            cost=0.0,
+            output=" é a capital",
+            is_streaming_chunk=True,
+        ),
+        AIResponse(
+            provider_name="mock_provider",
+            tokens_used=0,
+            cost=0.0,
+            output=" do Brasil.",
+            is_streaming_chunk=True,
+        ),
     ]
 
 
 # ─── Mock Provider ─────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def mock_provider(sample_response) -> MagicMock:
@@ -94,6 +111,7 @@ def failing_provider() -> MagicMock:
 @pytest.fixture
 def mock_provider_factory():
     """Fábrica para criar providers mock com nome customizado."""
+
     def _factory(name: str, response: AIResponse = None) -> MagicMock:
         p = MagicMock(spec=AIProvider)
         p.generate.return_value = response or AIResponse(
@@ -102,4 +120,5 @@ def mock_provider_factory():
         p.get_metadata.return_value = AIProviderMetadata(name=name, models=[f"{name}-model"])
         p.supports.return_value = True
         return p
+
     return _factory

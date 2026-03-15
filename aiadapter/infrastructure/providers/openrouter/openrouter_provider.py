@@ -13,12 +13,14 @@ Modelos gratuitos disponíveis (sem custo):
 
 Free tier: ~200 req/dia com modelos gratuitos, sem cartão de crédito.
 """
-from typing import Generator, List
-from aiadapter.core.interfaces.provider import AIProvider
+
+from collections.abc import Generator
+
+from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
-from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.enums.aicapability import AICapability
+from aiadapter.core.interfaces.provider import AIProvider
 
 DEFAULT_MODEL = "meta-llama/llama-3.2-3b-instruct:free"
 
@@ -51,8 +53,11 @@ class OpenRouterProvider(AIProvider):
     Prioriza modelos gratuitos por padrão.
     """
 
-    def __init__(self, api_key: str, site_url: str = "http://localhost", site_name: str = "AI Adapter"):
+    def __init__(
+        self, api_key: str, site_url: str = "http://localhost", site_name: str = "AI Adapter"
+    ):
         from openai import OpenAI
+
         self._client = OpenAI(
             api_key=api_key,
             base_url="https://openrouter.ai/api/v1",
@@ -115,7 +120,7 @@ class OpenRouterProvider(AIProvider):
             capabilities=["text"],
         )
 
-    def get_free_models(self) -> List[str]:
+    def get_free_models(self) -> list[str]:
         return FREE_MODELS.copy()
 
     def _estimate_cost(self, model: str, tokens: int) -> float:

@@ -1,18 +1,17 @@
-import os
 from dataclasses import dataclass
-from typing import Optional
+import os
 
 
 @dataclass
 class Settings:
     # APIs pagas (com free tier)
-    openai_api_key: Optional[str] = None
-    anthropic_api_key: Optional[str] = None
-    gemini_api_key: Optional[str] = None
-    groq_api_key: Optional[str] = None
-    mistral_api_key: Optional[str] = None
-    deepseek_api_key: Optional[str] = None
-    openrouter_api_key: Optional[str] = None
+    openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
+    gemini_api_key: str | None = None
+    groq_api_key: str | None = None
+    mistral_api_key: str | None = None
+    deepseek_api_key: str | None = None
+    openrouter_api_key: str | None = None
 
     # Ollama local
     ollama_base_url: str = "http://localhost:11434"
@@ -27,7 +26,7 @@ class Settings:
     openrouter_site_name: str = "AI Adapter"
 
     # Voice — TTS
-    elevenlabs_api_key: Optional[str] = None
+    elevenlabs_api_key: str | None = None
 
     # Voice — STT (Whisper local)
     whisper_model_size: str = "base"  # tiny | base | small | medium | large-v3

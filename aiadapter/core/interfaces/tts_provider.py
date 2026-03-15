@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
 

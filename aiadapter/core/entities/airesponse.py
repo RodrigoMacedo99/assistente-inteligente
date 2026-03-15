@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, List
+from typing import Any
 
 
 @dataclass
@@ -14,9 +14,10 @@ class AIResponse:
     is_streaming_chunk: Indica se é um chunk de streaming.
     tool_calls: Lista de chamadas de ferramentas solicitadas pela IA.
     """
+
     provider_name: str
     tokens_used: int = 0
     cost: float = 0.0
-    output: Optional[str] = None
+    output: str | None = None
     is_streaming_chunk: bool = False
-    tool_calls: Optional[List[Dict[str, Any]]] = None
+    tool_calls: list[dict[str, Any]] | None = None

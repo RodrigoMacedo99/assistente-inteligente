@@ -5,12 +5,14 @@ Modelos: llama, mixtral, gemma
 
 API compatível com OpenAI SDK.
 """
-from typing import Generator, List, Optional
-from aiadapter.core.interfaces.provider import AIProvider
+
+from collections.abc import Generator
+
+from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
-from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.enums.aicapability import AICapability
+from aiadapter.core.interfaces.provider import AIProvider
 
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
@@ -36,10 +38,12 @@ class GroqProvider(AIProvider):
     def __init__(self, api_key: str):
         try:
             from groq import Groq
+
             self._client = Groq(api_key=api_key)
         except ImportError:
             # Fallback: usa openai SDK com base_url da Groq
             from openai import OpenAI
+
             self._client = OpenAI(
                 api_key=api_key,
                 base_url="https://api.groq.com/openai/v1",

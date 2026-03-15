@@ -1,6 +1,7 @@
 """
 Testes do SimpleCache — cache em memória de respostas.
 """
+
 import pytest
 
 from aiadapter.core.entities.airequest import AIRequest
@@ -49,7 +50,9 @@ class TestSimpleCache:
         assert cache.get(req_b).output == "Buenos Aires"
 
     def test_set_sobrescreve_entrada_existente(self, cache, req_a, resp_a):
-        nova_resp = AIResponse(provider_name="openai", tokens_used=20, output="Brasília (atualizado)")
+        nova_resp = AIResponse(
+            provider_name="openai", tokens_used=20, output="Brasília (atualizado)"
+        )
         cache.set(req_a, resp_a)
         cache.set(req_a, nova_resp)
         assert cache.get(req_a).output == "Brasília (atualizado)"

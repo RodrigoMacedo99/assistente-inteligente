@@ -2,14 +2,16 @@
 Testes do HardwareAnalyzer — detecção de hardware e recomendação de modelos locais.
 Todos os comandos de sistema e psutil são mockados.
 """
+
 import subprocess
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from aiadapter.infrastructure.system.hardware_analyzer import (
+    MODEL_REQUIREMENTS,
     HardwareAnalyzer,
     HardwareProfile,
-    MODEL_REQUIREMENTS,
 )
 
 
@@ -41,7 +43,8 @@ class TestRecomendacaoDeModelos:
         assert "qwen2.5:72b" not in modelos
 
     def test_8gb_sem_gpu_inclui_modelos_medios(self, analyzer):
-        perfil = HardwareProfile(ram_gb=8.0)
+        # 10GB RAM - 2GB OS overhead = 8GB usable, enough for 7-8B models
+        perfil = HardwareProfile(ram_gb=10.0)
         modelos = analyzer._recommend_models(perfil)
         nomes_suportados = {"llama3.1:8b", "mistral:7b", "gemma2:9b", "qwen2.5:7b"}
         assert any(m in nomes_suportados for m in modelos)
@@ -121,8 +124,9 @@ class TestDeteccaoGPU:
         assert info["gpu_name" if "gpu_name" in info else "name"] is None
 
     def test_timeout_tratado(self, analyzer):
-        with patch("subprocess.run",
-                   side_effect=subprocess.TimeoutExpired(cmd="nvidia-smi", timeout=5)):
+        with patch(
+            "subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="nvidia-smi", timeout=5)
+        ):
             info = analyzer._detect_gpu()
         assert info["has_cuda"] is False
 
@@ -130,7 +134,7 @@ class TestDeteccaoGPU:
 class TestGetBestLocalModel:
     def test_retorna_modelo_instalado_compativel(self, analyzer):
         # Perfil com 8GB RAM
-        with patch.object(analyzer, "analyze") as mock_analyze:
+        with patch.object(analyzer, "analyze"):
             analyzer._profile = HardwareProfile(
                 ram_gb=8.0,
                 recommended_models=["mistral:7b", "llama3.2:3b", "gemma2:2b"],
@@ -164,22 +168,26 @@ class TestEstimativaRAMFallback:
         mock_result.stdout = "TotalPhysicalMemory\n17179869184\n"
         mock_result.returncode = 0
 
-        with patch("platform.system", return_value="Windows"):
-            with patch("subprocess.run", return_value=mock_result):
-                ram = analyzer._estimate_ram_fallback()
+        with (
+            patch("platform.system", return_value="Windows"),
+            patch("subprocess.run", return_value=mock_result),
+        ):
+            ram = analyzer._estimate_ram_fallback()
         assert ram == pytest.approx(16.0, abs=1.0)
 
     def test_fallback_retorna_valor_padrao_se_falhar(self, analyzer):
-        with patch("platform.system", return_value="Windows"):
-            with patch("subprocess.run", side_effect=Exception("Falhou")):
-                ram = analyzer._estimate_ram_fallback()
+        with (
+            patch("platform.system", return_value="Windows"),
+            patch("subprocess.run", side_effect=Exception("Falhou")),
+        ):
+            ram = analyzer._estimate_ram_fallback()
         assert ram == 8.0  # default
 
 
 class TestAnalyzeComPsutil:
     def test_analyze_com_psutil_mockado(self, analyzer):
         mock_mem = MagicMock()
-        mock_mem.total = 16 * (1024 ** 3)  # 16 GB
+        mock_mem.total = 16 * (1024**3)  # 16 GB
 
         mock_gpu = {
             "name": "NVIDIA GTX 1080",
@@ -189,10 +197,12 @@ class TestAnalyzeComPsutil:
             "has_rocm": False,
         }
 
-        with patch("psutil.virtual_memory", return_value=mock_mem):
-            with patch("psutil.cpu_count", side_effect=[8, 16]):
-                with patch.object(analyzer, "_detect_gpu", return_value=mock_gpu):
-                    perfil = analyzer.analyze()
+        with (
+            patch("psutil.virtual_memory", return_value=mock_mem),
+            patch("psutil.cpu_count", side_effect=[8, 16]),
+            patch.object(analyzer, "_detect_gpu", return_value=mock_gpu),
+        ):
+            perfil = analyzer.analyze()
 
         assert perfil.ram_gb == pytest.approx(16.0, abs=0.1)
         assert perfil.cpu_cores == 8
@@ -202,19 +212,28 @@ class TestAnalyzeComPsutil:
         assert len(perfil.recommended_models) > 0
 
     def test_analyze_sem_psutil_usa_fallback(self, analyzer):
-        with patch.dict("sys.modules", {"psutil": None}):
-            with patch.object(analyzer, "_estimate_ram_fallback", return_value=8.0):
-                with patch.object(analyzer, "_detect_gpu", return_value={
-                    "name": None, "vram_gb": 0.0,
-                    "has_cuda": False, "has_metal": False, "has_rocm": False
-                }):
-                    with patch("os.cpu_count", return_value=4):
-                        # psutil ImportError vai usar o fallback
-                        try:
-                            perfil = analyzer.analyze()
-                            assert perfil is not None
-                        except ImportError:
-                            pass  # OK se psutil não estiver instalado no ambiente de teste
+        with (
+            patch.dict("sys.modules", {"psutil": None}),
+            patch.object(analyzer, "_estimate_ram_fallback", return_value=8.0),
+            patch.object(
+                analyzer,
+                "_detect_gpu",
+                return_value={
+                    "name": None,
+                    "vram_gb": 0.0,
+                    "has_cuda": False,
+                    "has_metal": False,
+                    "has_rocm": False,
+                },
+            ),
+            patch("os.cpu_count", return_value=4),
+        ):
+            # psutil ImportError vai usar o fallback
+            try:
+                perfil = analyzer.analyze()
+                assert perfil is not None
+            except ImportError:
+                pass  # OK se psutil não estiver instalado no ambiente de teste
 
 
 class TestSummary:
@@ -235,7 +254,8 @@ class TestSummary:
         assert "mistral:7b" in summary["recommended_models"]
 
     def test_summary_sem_gpu_mostra_cpu_only(self, analyzer):
-        analyzer._profile = HardwareProfile(ram_gb=4.0, has_cuda=False,
-                                             has_metal=False, has_rocm=False)
+        analyzer._profile = HardwareProfile(
+            ram_gb=4.0, has_cuda=False, has_metal=False, has_rocm=False
+        )
         summary = analyzer.summary()
         assert summary["acceleration"] == "CPU only"

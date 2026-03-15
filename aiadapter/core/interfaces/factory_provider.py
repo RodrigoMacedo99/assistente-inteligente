@@ -1,5 +1,7 @@
-from aiadapter.core.interfaces.provider import AIProvider
 from abc import ABC, abstractmethod
+
+from aiadapter.core.interfaces.provider import AIProvider
+
 
 class AIProviderFactory(ABC):
     @abstractmethod

@@ -12,11 +12,13 @@ Tier de seleção:
   medium → DeepSeek > Mistral medium > GPT-4o-mini > Claude haiku
   high   → GPT-4o > Claude sonnet > Gemini pro > DeepSeek reasoner
 """
+
 import logging
-from typing import List, Dict, Optional
-from aiadapter.core.interfaces.router import AIRouter
+from typing import ClassVar
+
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.interfaces.provider import AIProvider
+from aiadapter.core.interfaces.router import AIRouter
 
 logger = logging.getLogger("aiadapter.router")
 
@@ -31,56 +33,58 @@ class CostRouter(AIRouter):
     """
 
     # Mapeamento de tier → ordem de providers preferidos
-    TIER_ORDER: Dict[str, List[str]] = {
+    TIER_ORDER: ClassVar[dict[str, list[str]]] = {
         "free": [
-            "ollama",           # 1º: local, zero custo
+            "ollama",  # 1º: local, zero custo
             "openrouter_free",  # 2º: OpenRouter modelos gratuitos
-            "groq",             # 3º: Groq free tier (14.4k req/dia)
-            "gemini",           # 4º: Gemini Flash (1500 req/dia grátis)
-            "deepseek",         # 5º: DeepSeek (muito barato)
+            "groq",  # 3º: Groq free tier (14.4k req/dia)
+            "gemini",  # 4º: Gemini Flash (1500 req/dia grátis)
+            "deepseek",  # 5º: DeepSeek (muito barato)
         ],
         "low": [
-            "groq",             # 1º: Groq free tier ultra-rápido
-            "gemini",           # 2º: Gemini Flash (barato)
-            "deepseek",         # 3º: DeepSeek chat (baratíssimo)
-            "mistral",          # 4º: Mistral small
-            "ollama",           # 5º: Ollama local (fallback)
-            "openai",           # 6º: GPT-4o-mini
+            "groq",  # 1º: Groq free tier ultra-rápido
+            "gemini",  # 2º: Gemini Flash (barato)
+            "deepseek",  # 3º: DeepSeek chat (baratíssimo)
+            "mistral",  # 4º: Mistral small
+            "ollama",  # 5º: Ollama local (fallback)
+            "openai",  # 6º: GPT-4o-mini
         ],
         "medium": [
-            "deepseek",         # 1º: DeepSeek (ótimo custo-benefício)
-            "mistral",          # 2º: Mistral medium
-            "groq",             # 3º: Groq 70B
-            "gemini",           # 4º: Gemini Pro
-            "openai",           # 5º: GPT-4o-mini
-            "anthropic",        # 6º: Claude haiku
+            "deepseek",  # 1º: DeepSeek (ótimo custo-benefício)
+            "mistral",  # 2º: Mistral medium
+            "groq",  # 3º: Groq 70B
+            "gemini",  # 4º: Gemini Pro
+            "openai",  # 5º: GPT-4o-mini
+            "anthropic",  # 6º: Claude haiku
         ],
         "high": [
-            "openai",           # 1º: GPT-4o
-            "anthropic",        # 2º: Claude Sonnet
-            "gemini",           # 3º: Gemini Pro
-            "deepseek",         # 4º: DeepSeek reasoner
-            "mistral",          # 5º: Mistral large
+            "openai",  # 1º: GPT-4o
+            "anthropic",  # 2º: Claude Sonnet
+            "gemini",  # 3º: Gemini Pro
+            "deepseek",  # 4º: DeepSeek reasoner
+            "mistral",  # 5º: Mistral large
         ],
     }
 
     def __init__(
         self,
-        providers: Dict[str, AIProvider],
+        providers: dict[str, AIProvider],
         quota_manager=None,
     ):
         self._providers = providers
         self._quota_manager = quota_manager
 
-    def route(self, request: AIRequest) -> List[AIProvider]:
+    def route(self, request: AIRequest) -> list[AIProvider]:
         tier = self._select_tier(request)
 
         # Provider específico solicitado
         if request.preferred_provider and request.preferred_provider in self._providers:
             preferred = self._providers[request.preferred_provider]
             rest = self._build_fallback_list(tier, exclude=request.preferred_provider)
-            logger.info(f"[ROUTER] preferred_provider={request.preferred_provider} → fallback={[p.get_metadata().name for p in rest]}")
-            return [preferred] + rest
+            logger.info(
+                f"[ROUTER] preferred_provider={request.preferred_provider} → fallback={[p.get_metadata().name for p in rest]}"
+            )
+            return [preferred, *rest]
 
         ordered = self._build_fallback_list(tier)
         logger.info(
@@ -113,7 +117,7 @@ class CostRouter(AIRouter):
         if request.priority == "low":
             return min(
                 [cost_tier, difficulty_tier, complexity_tier, "low"],
-                key=lambda t: self._tier_level(t)
+                key=lambda t: self._tier_level(t),
             )
 
         # Prioridade high garante pelo menos medium
@@ -139,7 +143,7 @@ class CostRouter(AIRouter):
     def _tier_level(self, tier: str) -> int:
         return {"free": 0, "low": 1, "medium": 2, "high": 3}.get(tier, 1)
 
-    def _build_fallback_list(self, tier: str, exclude: Optional[str] = None) -> List[AIProvider]:
+    def _build_fallback_list(self, tier: str, exclude: str | None = None) -> list[AIProvider]:
         """
         Constrói a lista de providers para o tier dado,
         filtrando providers indisponíveis e sem quota.
@@ -168,7 +172,9 @@ class CostRouter(AIRouter):
         if not result:
             available = list(self._providers.values())
             if available:
-                logger.warning("[ROUTER] Nenhum provider disponível no tier selecionado, usando qualquer disponível")
+                logger.warning(
+                    "[ROUTER] Nenhum provider disponível no tier selecionado, usando qualquer disponível"
+                )
                 result = available
 
         return result

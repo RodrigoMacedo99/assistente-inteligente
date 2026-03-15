@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any
+
 
 class AITool(ABC):
 
@@ -12,7 +13,7 @@ class AITool(ABC):
         pass
 
     @abstractmethod
-    def get_parameters(self) -> Dict[str, Any]:
+    def get_parameters(self) -> dict[str, Any]:
         pass
 
     @abstractmethod

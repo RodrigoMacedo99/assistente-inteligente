@@ -14,15 +14,14 @@ Instalação:
   # Linux (para suporte a áudio com ffmpeg):
   sudo apt-get install ffmpeg
 """
-import io
-import os
-import logging
-import tempfile
-from typing import Optional
 
-from aiadapter.core.interfaces.stt_provider import AISTTProvider
+import logging
+import os
+import tempfile
+
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
+from aiadapter.core.interfaces.stt_provider import AISTTProvider
 
 logger = logging.getLogger("aiadapter.stt.whisper_local")
 
@@ -41,7 +40,7 @@ class WhisperLocalProvider(AISTTProvider):
         self._model_size = model_size
         self._device = device
         self._model = None
-        self._load_error: Optional[str] = None
+        self._load_error: str | None = None
         self._try_load()
 
     def _try_load(self):
@@ -86,18 +85,20 @@ class WhisperLocalProvider(AISTTProvider):
                 language=language,
                 beam_size=5,
                 word_timestamps=False,
-                vad_filter=True,           # Remove silêncio automaticamente
+                vad_filter=True,  # Remove silêncio automaticamente
                 vad_parameters={"min_silence_duration_ms": 500},
             )
 
             segments = []
             full_text_parts = []
             for seg in segments_iter:
-                segments.append({
-                    "start": round(seg.start, 2),
-                    "end": round(seg.end, 2),
-                    "text": seg.text.strip(),
-                })
+                segments.append(
+                    {
+                        "start": round(seg.start, 2),
+                        "end": round(seg.end, 2),
+                        "text": seg.text.strip(),
+                    }
+                )
                 full_text_parts.append(seg.text.strip())
 
             transcription = " ".join(full_text_parts)

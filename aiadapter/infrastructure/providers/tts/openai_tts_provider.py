@@ -14,21 +14,22 @@ Vozes disponíveis:
 
 Instalação: pip install openai
 """
+
 import logging
 
-from aiadapter.core.interfaces.tts_provider import AITTSProvider
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
+from aiadapter.core.interfaces.tts_provider import AITTSProvider
 
 logger = logging.getLogger("aiadapter.tts.openai")
 
 OPENAI_VOICES = [
-    {"name": "alloy",   "gender": "neutral", "language": "multilingual", "style": "informative"},
-    {"name": "echo",    "gender": "male",    "language": "multilingual", "style": "clear"},
-    {"name": "fable",   "gender": "male",    "language": "multilingual", "style": "expressive"},
-    {"name": "onyx",    "gender": "male",    "language": "multilingual", "style": "authoritative"},
-    {"name": "nova",    "gender": "female",  "language": "multilingual", "style": "quick"},
-    {"name": "shimmer", "gender": "female",  "language": "multilingual", "style": "soft"},
+    {"name": "alloy", "gender": "neutral", "language": "multilingual", "style": "informative"},
+    {"name": "echo", "gender": "male", "language": "multilingual", "style": "clear"},
+    {"name": "fable", "gender": "male", "language": "multilingual", "style": "expressive"},
+    {"name": "onyx", "gender": "male", "language": "multilingual", "style": "authoritative"},
+    {"name": "nova", "gender": "female", "language": "multilingual", "style": "quick"},
+    {"name": "shimmer", "gender": "female", "language": "multilingual", "style": "soft"},
 ]
 
 COST_PER_1M_CHARS = {"tts-1": 15.0, "tts-1-hd": 30.0}
@@ -48,6 +49,7 @@ class OpenAITTSProvider(AITTSProvider):
     def _init_client(self):
         try:
             from openai import OpenAI
+
             self._client = OpenAI(api_key=self._api_key)
         except ImportError:
             logger.warning("[OPENAI-TTS] openai SDK não instalado.")
@@ -60,7 +62,11 @@ class OpenAITTSProvider(AITTSProvider):
             raise ValueError("Texto não pode ser vazio")
 
         voice = request.voice or DEFAULT_VOICE
-        fmt = request.audio_format_out if request.audio_format_out in ("mp3", "opus", "aac", "flac") else "mp3"
+        fmt = (
+            request.audio_format_out
+            if request.audio_format_out in ("mp3", "opus", "aac", "flac")
+            else "mp3"
+        )
         speed = max(0.25, min(4.0, request.speed))
 
         response = self._client.audio.speech.create(

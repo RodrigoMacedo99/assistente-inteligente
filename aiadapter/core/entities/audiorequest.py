@@ -1,5 +1,4 @@
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 
 @dataclass
@@ -24,19 +23,19 @@ class AudioRequest:
     """
 
     # STT fields
-    audio_data: Optional[bytes] = None
+    audio_data: bytes | None = None
     audio_format: str = "wav"
-    language: Optional[str] = None  # None = autodetect
+    language: str | None = None  # None = autodetect
 
     # TTS fields
-    text: Optional[str] = None
-    voice: Optional[str] = None
+    text: str | None = None
+    voice: str | None = None
     speed: float = 1.0
     audio_format_out: str = "mp3"
 
     # Shared
-    client_id: Optional[str] = None
-    preferred_provider: Optional[str] = None
+    client_id: str | None = None
+    preferred_provider: str | None = None
 
     def is_stt(self) -> bool:
         return self.audio_data is not None

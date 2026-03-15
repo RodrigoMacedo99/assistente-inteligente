@@ -13,15 +13,14 @@ Instalação:
   pip install pyttsx3
   sudo apt-get install espeak espeak-ng  # Linux
 """
-import io
+
 import logging
 import os
 import tempfile
-from typing import Optional
 
-from aiadapter.core.interfaces.tts_provider import AITTSProvider
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
+from aiadapter.core.interfaces.tts_provider import AITTSProvider
 
 logger = logging.getLogger("aiadapter.tts.pyttsx3")
 
@@ -35,7 +34,7 @@ class Pyttsx3TTSProvider(AITTSProvider):
     Gera arquivo WAV em diretório temporário e retorna os bytes.
     """
 
-    def __init__(self, rate: int = 150, volume: float = 1.0, voice_id: Optional[str] = None):
+    def __init__(self, rate: int = 150, volume: float = 1.0, voice_id: str | None = None):
         self._rate = rate
         self._volume = volume
         self._voice_id = voice_id
@@ -46,6 +45,7 @@ class Pyttsx3TTSProvider(AITTSProvider):
     def _init_engine(self):
         try:
             import pyttsx3
+
             self._engine = pyttsx3.init()
             self._engine.setProperty("rate", self._rate)
             self._engine.setProperty("volume", self._volume)
@@ -88,7 +88,7 @@ class Pyttsx3TTSProvider(AITTSProvider):
 
             # Estimativa de duração: ~150 palavras/min com taxa padrão
             words = len(request.text.split())
-            duration = (words / (self._rate / 60.0))
+            duration = words / (self._rate / 60.0)
 
             logger.info(f"[PYTTSX3] Síntese: {len(request.text)} chars → {len(audio_bytes)} bytes")
 
@@ -117,10 +117,12 @@ class Pyttsx3TTSProvider(AITTSProvider):
         for v in voices:
             vid = (v.id or "").lower()
             if language.lower() in vid:
-                result.append({
-                    "name": v.name or v.id,
-                    "id": v.id,
-                    "gender": "unknown",
-                    "language": language,
-                })
+                result.append(
+                    {
+                        "name": v.name or v.id,
+                        "id": v.id,
+                        "gender": "unknown",
+                        "language": language,
+                    }
+                )
         return result

@@ -8,18 +8,20 @@ Preços (USD por 1M tokens):
 
 Free tier: $5 de crédito no cadastro.
 """
-from typing import Generator
-from aiadapter.core.interfaces.provider import AIProvider
+
+from collections.abc import Generator
+
+from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
-from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.enums.aicapability import AICapability
+from aiadapter.core.interfaces.provider import AIProvider
 
 DEFAULT_MODEL = "deepseek-chat"
 
 DEEPSEEK_PRICING = {
-    "deepseek-chat": (0.14, 0.28),        # (input, output) USD/1M tokens
-    "deepseek-reasoner": (0.55, 2.19),    # CoT model, mais poderoso
+    "deepseek-chat": (0.14, 0.28),  # (input, output) USD/1M tokens
+    "deepseek-reasoner": (0.55, 2.19),  # CoT model, mais poderoso
 }
 
 
@@ -31,6 +33,7 @@ class DeepSeekProvider(AIProvider):
 
     def __init__(self, api_key: str):
         from openai import OpenAI
+
         self._client = OpenAI(
             api_key=api_key,
             base_url="https://api.deepseek.com",

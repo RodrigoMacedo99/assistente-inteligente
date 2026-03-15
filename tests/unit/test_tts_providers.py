@@ -1,7 +1,8 @@
 """Testes unitários para providers TTS (sem chamadas de rede)."""
-import os
+
+from unittest.mock import MagicMock, mock_open, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, mock_open
 
 from aiadapter.core.entities.audiorequest import AudioRequest
 
@@ -11,10 +12,12 @@ class TestPyttsx3TTSProvider:
 
     def _make_provider(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
-        with patch("pyttsx3.init") as mock_init:
-            engine = MagicMock()
-            engine.getProperty.return_value = []
-            mock_init.return_value = engine
+
+        mock_pyttsx3 = MagicMock()
+        engine = MagicMock()
+        engine.getProperty.return_value = []
+        mock_pyttsx3.init.return_value = engine
+        with patch.dict("sys.modules", {"pyttsx3": mock_pyttsx3}):
             p = Pyttsx3TTSProvider(rate=150, volume=1.0)
         p._engine = engine
         p._available = True
@@ -22,26 +25,30 @@ class TestPyttsx3TTSProvider:
 
     def test_get_name(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
-        with patch("pyttsx3.init", side_effect=ImportError):
+
+        with patch.dict("sys.modules", {"pyttsx3": None}):
             p = Pyttsx3TTSProvider()
         assert p.get_name() == "pyttsx3"
 
     def test_is_available_false_when_import_error(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
-        with patch("pyttsx3.init", side_effect=ImportError):
+
+        with patch.dict("sys.modules", {"pyttsx3": None}):
             p = Pyttsx3TTSProvider()
         assert not p.is_available()
 
     def test_speak_raises_when_unavailable(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
-        with patch("pyttsx3.init", side_effect=ImportError):
+
+        with patch.dict("sys.modules", {"pyttsx3": None}):
             p = Pyttsx3TTSProvider()
         with pytest.raises(RuntimeError, match="Pyttsx3 indisponível"):
             p.speak(AudioRequest(text="hello"))
 
     def test_speak_raises_on_empty_text(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
-        with patch("pyttsx3.init", side_effect=ImportError):
+
+        with patch.dict("sys.modules", {"pyttsx3": None}):
             p = Pyttsx3TTSProvider()
         p._available = True
         p._engine = MagicMock()
@@ -50,21 +57,25 @@ class TestPyttsx3TTSProvider:
 
     def test_speak_returns_wav_response(self, tmp_path):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
+
         fake_wav = b"RIFF....WAVEfmt " + b"\x00" * 100
 
-        with patch("pyttsx3.init") as mock_init:
-            engine = MagicMock()
-            engine.getProperty.return_value = []
-            mock_init.return_value = engine
+        mock_pyttsx3 = MagicMock()
+        engine = MagicMock()
+        engine.getProperty.return_value = []
+        mock_pyttsx3.init.return_value = engine
+        with patch.dict("sys.modules", {"pyttsx3": mock_pyttsx3}):
             p = Pyttsx3TTSProvider()
 
         p._available = True
         p._engine = engine
 
-        with patch("tempfile.NamedTemporaryFile") as mock_tmp, \
-             patch("builtins.open", mock_open(read_data=fake_wav)), \
-             patch("os.path.exists", return_value=True), \
-             patch("os.unlink"):
+        with (
+            patch("tempfile.NamedTemporaryFile") as mock_tmp,
+            patch("builtins.open", mock_open(read_data=fake_wav)),
+            patch("os.path.exists", return_value=True),
+            patch("os.unlink"),
+        ):
             mock_tmp.return_value.__enter__.return_value.name = str(tmp_path / "test.wav")
             engine.save_to_file = MagicMock()
             engine.runAndWait = MagicMock()
@@ -78,7 +89,8 @@ class TestPyttsx3TTSProvider:
 
     def test_list_voices_empty_when_unavailable(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
-        with patch("pyttsx3.init", side_effect=ImportError):
+
+        with patch.dict("sys.modules", {"pyttsx3": None}):
             p = Pyttsx3TTSProvider()
         assert p.list_voices("pt") == []
 
@@ -88,6 +100,7 @@ class TestEdgeTTSProvider:
 
     def test_get_name(self):
         from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider
+
         with patch("builtins.__import__", side_effect=ImportError):
             pass
         p = EdgeTTSProvider.__new__(EdgeTTSProvider)
@@ -97,12 +110,14 @@ class TestEdgeTTSProvider:
 
     def test_is_available_false_when_import_error(self):
         from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider
+
         with patch.object(EdgeTTSProvider, "_check_available", return_value=False):
             p = EdgeTTSProvider()
         assert not p.is_available()
 
     def test_speak_raises_when_unavailable(self):
         from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider
+
         with patch.object(EdgeTTSProvider, "_check_available", return_value=False):
             p = EdgeTTSProvider()
         with pytest.raises(RuntimeError, match="EdgeTTS indisponível"):
@@ -110,6 +125,7 @@ class TestEdgeTTSProvider:
 
     def test_speak_raises_empty_text(self):
         from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider
+
         with patch.object(EdgeTTSProvider, "_check_available", return_value=True):
             p = EdgeTTSProvider()
         with pytest.raises(ValueError, match="Texto não pode ser vazio"):
@@ -117,6 +133,7 @@ class TestEdgeTTSProvider:
 
     def test_speed_to_rate_conversion(self):
         from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider
+
         with patch.object(EdgeTTSProvider, "_check_available", return_value=False):
             p = EdgeTTSProvider()
 
@@ -126,7 +143,11 @@ class TestEdgeTTSProvider:
         assert p._speed_to_rate(2.0) == "+100%"
 
     def test_list_voices_pt(self):
-        from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider, VOICES_PT
+        from aiadapter.infrastructure.providers.tts.edge_tts_provider import (
+            VOICES_PT,
+            EdgeTTSProvider,
+        )
+
         with patch.object(EdgeTTSProvider, "_check_available", return_value=False):
             p = EdgeTTSProvider()
         voices = p.list_voices("pt")
@@ -134,7 +155,11 @@ class TestEdgeTTSProvider:
         assert all(v["language"].startswith("pt") for v in voices)
 
     def test_list_voices_en(self):
-        from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider, VOICES_EN
+        from aiadapter.infrastructure.providers.tts.edge_tts_provider import (
+            VOICES_EN,
+            EdgeTTSProvider,
+        )
+
         with patch.object(EdgeTTSProvider, "_check_available", return_value=False):
             p = EdgeTTSProvider()
         voices = p.list_voices("en")
@@ -143,12 +168,15 @@ class TestEdgeTTSProvider:
 
     def test_speak_returns_mp3_response(self):
         from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider
+
         with patch.object(EdgeTTSProvider, "_check_available", return_value=True):
             p = EdgeTTSProvider()
 
         fake_audio = b"\xff\xfb\x90" + b"\x00" * 100
-        with patch.object(p, "_synthesize_async", return_value=fake_audio), \
-             patch("asyncio.run", return_value=fake_audio):
+        with (
+            patch.object(p, "_synthesize_async", return_value=fake_audio),
+            patch("asyncio.run", return_value=fake_audio),
+        ):
             resp = p.speak(AudioRequest(text="Olá mundo, isso é um teste."))
 
         assert resp.provider_name == "edge_tts"
@@ -161,7 +189,9 @@ class TestOpenAITTSProvider:
 
     def _make_provider(self):
         from aiadapter.infrastructure.providers.tts.openai_tts_provider import OpenAITTSProvider
-        with patch("openai.OpenAI"):
+
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
             p = OpenAITTSProvider(api_key="sk-test")
         return p
 
@@ -175,12 +205,15 @@ class TestOpenAITTSProvider:
 
     def test_is_available_false_without_key(self):
         from aiadapter.infrastructure.providers.tts.openai_tts_provider import OpenAITTSProvider
-        with patch("openai.OpenAI"):
+
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
             p = OpenAITTSProvider(api_key="")
         assert not p.is_available()
 
     def test_speak_raises_when_unavailable(self):
         from aiadapter.infrastructure.providers.tts.openai_tts_provider import OpenAITTSProvider
+
         with patch.object(OpenAITTSProvider, "_init_client"):
             p = OpenAITTSProvider.__new__(OpenAITTSProvider)
             p._api_key = ""

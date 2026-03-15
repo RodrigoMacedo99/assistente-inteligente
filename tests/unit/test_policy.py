@@ -1,6 +1,7 @@
 """
 Testes do SimplePolicy — validação de requisições.
 """
+
 import pytest
 
 from aiadapter.core.entities.airequest import AIRequest
@@ -54,7 +55,7 @@ class TestSimplePolicy:
 
     def test_difficulty_invalida_lanca(self, policy):
         req = AIRequest(prompt="Teste", difficulty="impossible")
-        with pytest.raises(ValueError, match="[Dd]ificuldade"):
+        with pytest.raises(ValueError, match=r"[Dd]ificuldade"):
             policy.validate(req)
 
     @pytest.mark.parametrize("difficulty", ["easy", "medium", "hard", "expert"])
@@ -70,7 +71,7 @@ class TestSimplePolicy:
 
     def test_priority_invalida_lanca(self, policy):
         req = AIRequest(prompt="Teste", priority="urgent")
-        with pytest.raises(ValueError, match="[Pp]rioridade"):
+        with pytest.raises(ValueError, match=r"[Pp]rioridade"):
             policy.validate(req)
 
     @pytest.mark.parametrize("priority", ["low", "normal", "high"])
@@ -102,12 +103,12 @@ class TestSimplePolicy:
 
     def test_complexity_negativa_lanca(self, policy):
         req = AIRequest(prompt="Teste", complexity=-0.1)
-        with pytest.raises(ValueError, match="[Cc]omplexity"):
+        with pytest.raises(ValueError, match=r"[Cc]omplexity"):
             policy.validate(req)
 
     def test_complexity_acima_de_1_lanca(self, policy):
         req = AIRequest(prompt="Teste", complexity=1.1)
-        with pytest.raises(ValueError, match="[Cc]omplexity"):
+        with pytest.raises(ValueError, match=r"[Cc]omplexity"):
             policy.validate(req)
 
     @pytest.mark.parametrize("complexity", [0.0, 0.5, 1.0])

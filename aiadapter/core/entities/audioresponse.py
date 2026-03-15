@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -21,18 +20,24 @@ class AudioResponse:
     Comuns:
         provider_name: nome do provider que gerou a resposta
         cost: custo estimado em USD
+        fallback_chain: histórico de tentativas de fallback automático.
+            Cada entrada: {"provider": str, "success": bool, "attempts": int, "error"?: str}
+            ou {"provider": str, "skipped": True, "reason": "circuit_open"}
     """
 
     provider_name: str
     cost: float = 0.0
 
     # STT
-    transcription: Optional[str] = None
-    language_detected: Optional[str] = None
+    transcription: str | None = None
+    language_detected: str | None = None
     confidence: float = 0.0
-    segments: Optional[list] = None
+    segments: list | None = None
 
     # TTS
-    audio_data: Optional[bytes] = None
+    audio_data: bytes | None = None
     audio_format: str = "mp3"
     duration_seconds: float = 0.0
+
+    # Fallback metadata
+    fallback_chain: list = field(default_factory=list)

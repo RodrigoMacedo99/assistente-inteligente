@@ -14,19 +14,19 @@ Instalação (escolha um):
   pip install sounddevice scipy    # recomendado
   pip install pyaudio              # alternativo
 """
+
 import io
 import logging
 import struct
 import wave
-from typing import Optional
 
 logger = logging.getLogger("aiadapter.microphone")
 
-DEFAULT_SAMPLE_RATE = 16000   # Hz — ideal para Whisper
-DEFAULT_CHANNELS = 1          # mono
-DEFAULT_CHUNK_MS = 100        # ms por chunk de captura
-SILENCE_THRESHOLD_RMS = 500   # nível RMS abaixo = silêncio
-MIN_SPEECH_DURATION = 0.3     # segundos de fala para considerar válida
+DEFAULT_SAMPLE_RATE = 16000  # Hz — ideal para Whisper
+DEFAULT_CHANNELS = 1  # mono
+DEFAULT_CHUNK_MS = 100  # ms por chunk de captura
+SILENCE_THRESHOLD_RMS = 500  # nível RMS abaixo = silêncio
+MIN_SPEECH_DURATION = 0.3  # segundos de fala para considerar válida
 
 
 class MicrophoneCapture:
@@ -39,16 +39,17 @@ class MicrophoneCapture:
         self,
         sample_rate: int = DEFAULT_SAMPLE_RATE,
         channels: int = DEFAULT_CHANNELS,
-        device_index: Optional[int] = None,
+        device_index: int | None = None,
     ):
         self._sample_rate = sample_rate
         self._channels = channels
         self._device_index = device_index
         self._backend = self._detect_backend()
 
-    def _detect_backend(self) -> Optional[str]:
+    def _detect_backend(self) -> str | None:
         try:
             import sounddevice  # noqa: F401
+
             logger.info("[MIC] Backend: sounddevice")
             return "sounddevice"
         except ImportError:
@@ -56,6 +57,7 @@ class MicrophoneCapture:
 
         try:
             import pyaudio  # noqa: F401
+
             logger.info("[MIC] Backend: pyaudio")
             return "pyaudio"
         except ImportError:
@@ -99,7 +101,6 @@ class MicrophoneCapture:
 
     def _record_sounddevice(self, duration: float) -> bytes:
         import sounddevice as sd
-        import numpy as np
 
         frames = sd.rec(
             int(duration * self._sample_rate),
@@ -113,8 +114,8 @@ class MicrophoneCapture:
         return self._numpy_to_wav(frames)
 
     def _record_vad_sounddevice(self, max_dur: float, silence_dur: float) -> bytes:
-        import sounddevice as sd
         import numpy as np
+        import sounddevice as sd
 
         chunk_size = int(self._sample_rate * DEFAULT_CHUNK_MS / 1000)
         all_frames: list[np.ndarray] = []
@@ -150,6 +151,7 @@ class MicrophoneCapture:
             logger.warning("[MIC] Nenhuma fala detectada")
 
         import numpy as np
+
         combined = np.concatenate(all_frames, axis=0)
         return self._numpy_to_wav(combined)
 
@@ -279,6 +281,8 @@ class MicrophoneCapture:
         for i in range(pa.get_device_count()):
             info = pa.get_device_info_by_index(i)
             if info["maxInputChannels"] > 0:
-                devices.append({"index": i, "name": info["name"], "channels": info["maxInputChannels"]})
+                devices.append(
+                    {"index": i, "name": info["name"], "channels": info["maxInputChannels"]}
+                )
         pa.terminate()
         return devices

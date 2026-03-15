@@ -1,11 +1,14 @@
-from typing import List, Dict, Any, Generator
-from aiadapter.core.interfaces.provider import AIProvider
+from collections.abc import Generator
+import json
+from typing import Any
+
+import requests
+
+from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
-from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.enums.aicapability import AICapability
-import requests
-import json
+from aiadapter.core.interfaces.provider import AIProvider
 
 DEFAULT_MODEL = "llama3.2"
 
@@ -23,7 +26,7 @@ class OllamaProvider(AIProvider):
         except Exception:
             return False
 
-    def list_local_models(self) -> List[str]:
+    def list_local_models(self) -> list[str]:
         """Lista modelos já baixados localmente."""
         try:
             resp = requests.get(f"{self._base_url}/api/tags", timeout=5)
@@ -62,7 +65,7 @@ class OllamaProvider(AIProvider):
             cost=0.0,
         )
 
-    def _generate_stream(self, payload: Dict[str, Any]) -> Generator[AIResponse, None, None]:
+    def _generate_stream(self, payload: dict[str, Any]) -> Generator[AIResponse, None, None]:
         with requests.post(
             f"{self._base_url}/api/chat",
             json=payload,
