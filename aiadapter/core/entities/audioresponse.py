@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
@@ -30,13 +29,13 @@ class AudioResponse:
     cost: float = 0.0
 
     # STT
-    transcription: Optional[str] = None
-    language_detected: Optional[str] = None
+    transcription: str | None = None
+    language_detected: str | None = None
     confidence: float = 0.0
-    segments: Optional[list] = None
+    segments: list | None = None
 
     # TTS
-    audio_data: Optional[bytes] = None
+    audio_data: bytes | None = None
     audio_format: str = "mp3"
     duration_seconds: float = 0.0
 

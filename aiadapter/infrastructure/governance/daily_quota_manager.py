@@ -4,18 +4,17 @@ Gerenciador de quotas diárias para provedores gratuitos.
 Armazena o consumo diário em um arquivo JSON local.
 Reseta automaticamente no início de cada novo dia.
 """
+from datetime import date
 import json
-import os
 import logging
-from datetime import datetime, date
-from typing import Dict, Optional
+import os
 
 logger = logging.getLogger("aiadapter.quota")
 
 QUOTA_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "daily_quotas.json")
 
 # Limites diários por provedor (requisições)
-DAILY_LIMITS: Dict[str, int] = {
+DAILY_LIMITS: dict[str, int] = {
     "gemini": 1500,          # Gemini Free: 1500 req/dia
     "groq": 14400,           # Groq Free: 14400 req/dia (~10 req/min)
     "openrouter_free": 200,  # OpenRouter modelos gratuitos: ~200 req/dia
@@ -43,18 +42,18 @@ class DailyQuotaManager:
         if not os.path.exists(self._quota_file):
             return {"date": str(date.today()), "usage": {}}
         try:
-            with open(self._quota_file, "r", encoding="utf-8") as f:
+            with open(self._quota_file, encoding="utf-8") as f:
                 data = json.load(f)
             # Se mudou o dia, reseta
             if data.get("date") != str(date.today()):
-                logger.info(f"[QUOTA] Novo dia detectado - resetando quotas diárias")
+                logger.info("[QUOTA] Novo dia detectado - resetando quotas diárias")
                 data = {"date": str(date.today()), "usage": {}}
                 self._save(data)
             return data
         except (json.JSONDecodeError, KeyError):
             return {"date": str(date.today()), "usage": {}}
 
-    def _save(self, data: Optional[dict] = None):
+    def _save(self, data: dict | None = None):
         with open(self._quota_file, "w", encoding="utf-8") as f:
             json.dump(data or self._data, f, indent=2, ensure_ascii=False)
 
@@ -97,7 +96,7 @@ class DailyQuotaManager:
             f"[QUOTA] {provider}: {self._data['usage'][provider]}/{self.get_limit(provider)}"
         )
 
-    def get_all_status(self) -> Dict[str, dict]:
+    def get_all_status(self) -> dict[str, dict]:
         """Retorna o status de todos os provedores rastreados."""
         self._reload_if_new_day()
         status = {}

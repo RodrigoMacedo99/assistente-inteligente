@@ -8,9 +8,9 @@ Instalação: pip install openai
 """
 import logging
 
-from aiadapter.core.interfaces.stt_provider import AISTTProvider
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
+from aiadapter.core.interfaces.stt_provider import AISTTProvider
 
 logger = logging.getLogger("aiadapter.stt.openai")
 

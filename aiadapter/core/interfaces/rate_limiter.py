@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+
 from aiadapter.core.entities.airequest import AIRequest
+
 
 class AIRateLimiter(ABC):
 

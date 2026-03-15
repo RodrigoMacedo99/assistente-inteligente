@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
+
+from aiadapter.interfaces.aicapability import AICapability
 from aiadapter.interfaces.aiprovidermedata import AIProviderMetadata
 from aiadapter.interfaces.airequest import AIRequest
 from aiadapter.interfaces.airesponse import AIResponse
-from aiadapter.interfaces.aicapability import AICapability
-from typing import List, Dict, Any
+
 
 class AIProvider(ABC):
 

@@ -1,13 +1,14 @@
 """
 Testes do CostRouter — roteamento inteligente por tier.
 """
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from aiadapter.core.entities.airequest import AIRequest
+import pytest
+
 from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
-from aiadapter.infrastructure.routing.cost_router import CostRouter
+from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.infrastructure.governance.daily_quota_manager import DailyQuotaManager
+from aiadapter.infrastructure.routing.cost_router import CostRouter
 
 
 def make_provider(name: str):

@@ -1,12 +1,13 @@
-from aiadapter.core.interfaces.provider import AIProvider
-from aiadapter.core.interfaces.router import AIRouter
-from aiadapter.core.interfaces.policy import AIPolicy
-from aiadapter.core.interfaces.observability import AIObservability
-from aiadapter.core.interfaces.cache import AICache
-from aiadapter.core.interfaces.rate_limiter import AIRateLimiter
+from collections.abc import Generator
+from typing import Any
+
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
-from typing import Generator, Any, Dict, List, Optional
+from aiadapter.core.interfaces.cache import AICache
+from aiadapter.core.interfaces.observability import AIObservability
+from aiadapter.core.interfaces.policy import AIPolicy
+from aiadapter.core.interfaces.rate_limiter import AIRateLimiter
+from aiadapter.core.interfaces.router import AIRouter
 from aiadapter.core.interfaces.tool import AITool
 
 
@@ -19,7 +20,7 @@ class AIService:
         observability: AIObservability,
         rate_limiter: AIRateLimiter,
         cache: AICache,
-        tools: Optional[Dict[str, AITool]] = None,
+        tools: dict[str, AITool] | None = None,
     ):
         self._router = router
         self._policy = policy
@@ -103,7 +104,7 @@ class AIService:
         self._cache.set(request, final_response)
         self._observability.log_response(final_response)
 
-    def _handle_tool_calls(self, tool_calls: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _handle_tool_calls(self, tool_calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
         tool_outputs = []
         for tool_call in tool_calls:
             function_name = tool_call["function"]["name"]

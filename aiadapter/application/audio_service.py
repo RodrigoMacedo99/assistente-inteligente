@@ -18,13 +18,12 @@ Prioridade de providers (ordem padrão de preferência):
   STT: local (faster-whisper) → gratuito (groq-whisper) → pago (openai-whisper)
 """
 import logging
-from typing import Optional
 
 from aiadapter.application.provider_health import ProviderHealth
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
-from aiadapter.core.interfaces.tts_provider import AITTSProvider
 from aiadapter.core.interfaces.stt_provider import AISTTProvider
+from aiadapter.core.interfaces.tts_provider import AITTSProvider
 
 logger = logging.getLogger("aiadapter.audio_service")
 
@@ -56,8 +55,8 @@ class AudioService:
 
     def __init__(
         self,
-        tts_providers: Optional[list[AITTSProvider]] = None,
-        stt_providers: Optional[list[AISTTProvider]] = None,
+        tts_providers: list[AITTSProvider] | None = None,
+        stt_providers: list[AISTTProvider] | None = None,
         local_first: bool = True,
         max_retries: int = _DEFAULT_MAX_RETRIES,
         circuit_breaker_threshold: int = _DEFAULT_CIRCUIT_THRESHOLD,
@@ -93,7 +92,7 @@ class AudioService:
             raise RuntimeError("Nenhum provider TTS disponível")
 
         fallback_chain: list[dict] = []
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
 
         for provider in providers:
             name = provider.get_name()
@@ -155,7 +154,7 @@ class AudioService:
             raise RuntimeError("Nenhum provider STT disponível")
 
         fallback_chain: list[dict] = []
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
 
         for provider in providers:
             name = provider.get_name()
@@ -192,7 +191,7 @@ class AudioService:
 
     # ── Provider selection ────────────────────────────────────────────────────
 
-    def _get_available_tts(self, preferred: Optional[str] = None) -> list[AITTSProvider]:
+    def _get_available_tts(self, preferred: str | None = None) -> list[AITTSProvider]:
         available = [p for p in self._tts_providers if p.is_available()]
         if preferred:
             preferred_providers = [p for p in available if p.get_name() == preferred]
@@ -200,7 +199,7 @@ class AudioService:
             return preferred_providers + rest
         return available
 
-    def _get_available_stt(self, preferred: Optional[str] = None) -> list[AISTTProvider]:
+    def _get_available_stt(self, preferred: str | None = None) -> list[AISTTProvider]:
         available = [p for p in self._stt_providers if p.is_available()]
         if preferred:
             preferred_providers = [p for p in available if p.get_name() == preferred]

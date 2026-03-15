@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
 

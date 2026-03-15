@@ -2,8 +2,8 @@
 Testes do LoggerObservability — logging estruturado de requests e responses.
 """
 import logging
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse

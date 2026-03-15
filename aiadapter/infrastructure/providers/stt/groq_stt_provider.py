@@ -9,12 +9,10 @@ Instalação: pip install groq
 Cadastro gratuito: https://console.groq.com
 """
 import logging
-import io
-from typing import Optional
 
-from aiadapter.core.interfaces.stt_provider import AISTTProvider
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
+from aiadapter.core.interfaces.stt_provider import AISTTProvider
 
 logger = logging.getLogger("aiadapter.stt.groq")
 

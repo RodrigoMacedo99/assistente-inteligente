@@ -1,6 +1,7 @@
 """Testes do AudioService — orquestrador TTS/STT."""
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 from aiadapter.application.audio_service import AudioService
 from aiadapter.core.entities.audiorequest import AudioRequest

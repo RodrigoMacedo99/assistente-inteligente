@@ -19,11 +19,10 @@ Vozes padrão notáveis:
 Instalação: pip install elevenlabs
 """
 import logging
-from typing import Optional
 
-from aiadapter.core.interfaces.tts_provider import AITTSProvider
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
+from aiadapter.core.interfaces.tts_provider import AITTSProvider
 
 logger = logging.getLogger("aiadapter.tts.elevenlabs")
 
@@ -56,7 +55,7 @@ class ElevenLabsTTSProvider(AITTSProvider):
     def __init__(
         self,
         api_key: str,
-        default_voice_id: Optional[str] = None,
+        default_voice_id: str | None = None,
         model_id: str = DEFAULT_MODEL_ID,
     ):
         self._api_key = api_key

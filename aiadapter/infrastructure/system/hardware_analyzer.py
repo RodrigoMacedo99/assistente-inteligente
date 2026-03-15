@@ -4,12 +4,10 @@ Analisador de hardware para seleção inteligente de modelos locais.
 Detecta CPU, RAM, GPU e recomenda modelos Ollama compatíveis.
 Oferece download automático do melhor modelo local disponível.
 """
-import os
-import json
-import logging
-import subprocess
 from dataclasses import dataclass, field
-from typing import List, Optional, Dict, Tuple
+import logging
+import os
+import subprocess
 
 logger = logging.getLogger("aiadapter.hardware")
 
@@ -20,17 +18,17 @@ class HardwareProfile:
     ram_gb: float = 0.0
     cpu_cores: int = 0
     cpu_threads: int = 0
-    gpu_name: Optional[str] = None
+    gpu_name: str | None = None
     gpu_vram_gb: float = 0.0
     has_cuda: bool = False
     has_metal: bool = False   # macOS Apple Silicon
     has_rocm: bool = False    # AMD GPUs
     platform: str = ""
-    recommended_models: List[str] = field(default_factory=list)
+    recommended_models: list[str] = field(default_factory=list)
 
 
 # Requisitos mínimos de RAM para cada modelo Ollama (em GB)
-MODEL_REQUIREMENTS: Dict[str, Dict] = {
+MODEL_REQUIREMENTS: dict[str, dict] = {
     # Modelos pequenos (1-4B params) - rodam em quase qualquer máquina
     "llama3.2:1b": {
         "ram_gb": 2.0, "vram_gb": 1.5, "quality": "basic",
@@ -93,7 +91,7 @@ class HardwareAnalyzer:
 
     def __init__(self, ollama_base_url: str = "http://localhost:11434"):
         self._ollama_url = ollama_base_url
-        self._profile: Optional[HardwareProfile] = None
+        self._profile: HardwareProfile | None = None
 
     def analyze(self) -> HardwareProfile:
         """Analisa o hardware do sistema e retorna um perfil."""
@@ -154,7 +152,7 @@ class HardwareAnalyzer:
                     ["wmic", "computersystem", "get", "TotalPhysicalMemory"],
                     capture_output=True, text=True
                 )
-                lines = [l.strip() for l in result.stdout.strip().splitlines() if l.strip().isdigit()]
+                lines = [ln.strip() for ln in result.stdout.strip().splitlines() if ln.strip().isdigit()]
                 if lines:
                     return round(int(lines[0]) / (1024 ** 3), 1)
         except Exception:
@@ -212,7 +210,7 @@ class HardwareAnalyzer:
 
         return info
 
-    def _recommend_models(self, profile: HardwareProfile) -> List[str]:
+    def _recommend_models(self, profile: HardwareProfile) -> list[str]:
         """
         Retorna modelos recomendados em ordem de qualidade decrescente,
         levando em conta RAM e VRAM disponíveis.
@@ -238,7 +236,7 @@ class HardwareAnalyzer:
 
         return [c[0] for c in candidates[:5]]  # top 5
 
-    def get_best_local_model(self, installed_models: List[str]) -> Optional[str]:
+    def get_best_local_model(self, installed_models: list[str]) -> str | None:
         """
         Dentre os modelos já instalados no Ollama, retorna o melhor compatível.
         """
@@ -261,7 +259,7 @@ class HardwareAnalyzer:
             return installed_models[0]
         return None
 
-    def pull_best_model(self, ollama_provider) -> Optional[str]:
+    def pull_best_model(self, ollama_provider) -> str | None:
         """
         Verifica se o melhor modelo recomendado está instalado.
         Se não estiver, baixa automaticamente via Ollama.

@@ -11,14 +11,12 @@ Cobre:
   - Saúde é refletida no status()
 """
 import time
-import pytest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 from aiadapter.application.audio_service import AudioService
 from aiadapter.application.provider_health import ProviderHealth
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

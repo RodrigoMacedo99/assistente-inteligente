@@ -2,20 +2,20 @@
 Testes do AIService — orquestrador principal do pipeline de IA.
 Todos os providers são mockados; nenhuma chamada real à API é feita.
 """
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, call
 
 from aiadapter.application.ai_service import AIService
+from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
-from aiadapter.core.interfaces.provider import AIProvider
-from aiadapter.core.interfaces.router import AIRouter
-from aiadapter.core.interfaces.policy import AIPolicy
 from aiadapter.core.interfaces.cache import AICache
-from aiadapter.core.interfaces.rate_limiter import AIRateLimiter
 from aiadapter.core.interfaces.observability import AIObservability
-from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
-
+from aiadapter.core.interfaces.policy import AIPolicy
+from aiadapter.core.interfaces.provider import AIProvider
+from aiadapter.core.interfaces.rate_limiter import AIRateLimiter
+from aiadapter.core.interfaces.router import AIRouter
 
 # ─── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -165,7 +165,7 @@ class TestAIServiceErros:
     def test_rate_limit_excedido_lanca_excecao(self, service, request_simples,
                                                 mock_rate_limiter):
         mock_rate_limiter.allow_request.return_value = False
-        with pytest.raises(Exception, match="[Rr]ate limit"):
+        with pytest.raises(Exception, match=r"[Rr]ate limit"):
             service.execute(request_simples)
 
     def test_policy_invalida_lanca_excecao(self, service, request_simples, mock_policy):

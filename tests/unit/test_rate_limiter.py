@@ -2,8 +2,9 @@
 Testes do SimpleRateLimiter — controle de taxa por tenant.
 """
 import time
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.infrastructure.governance.simple_rate_limiter import SimpleRateLimiter

@@ -1,7 +1,8 @@
 import logging
-from aiadapter.core.interfaces.observability import AIObservability
+
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
+from aiadapter.core.interfaces.observability import AIObservability
 
 
 class LoggerObservability(AIObservability):

@@ -13,15 +13,13 @@ Instalação:
   pip install pyttsx3
   sudo apt-get install espeak espeak-ng  # Linux
 """
-import io
 import logging
 import os
 import tempfile
-from typing import Optional
 
-from aiadapter.core.interfaces.tts_provider import AITTSProvider
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
+from aiadapter.core.interfaces.tts_provider import AITTSProvider
 
 logger = logging.getLogger("aiadapter.tts.pyttsx3")
 
@@ -35,7 +33,7 @@ class Pyttsx3TTSProvider(AITTSProvider):
     Gera arquivo WAV em diretório temporário e retorna os bytes.
     """
 
-    def __init__(self, rate: int = 150, volume: float = 1.0, voice_id: Optional[str] = None):
+    def __init__(self, rate: int = 150, volume: float = 1.0, voice_id: str | None = None):
         self._rate = rate
         self._volume = volume
         self._voice_id = voice_id

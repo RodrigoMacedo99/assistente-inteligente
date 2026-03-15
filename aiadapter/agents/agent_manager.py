@@ -1,5 +1,6 @@
-from typing import Dict, Optional
+
 from aiadapter.agents.base_agent import BaseAgent
+
 
 class AgentManager:
     """
@@ -7,7 +8,7 @@ class AgentManager:
     """
 
     def __init__(self):
-        self.agents: Dict[str, BaseAgent] = {}
+        self.agents: dict[str, BaseAgent] = {}
 
     def register_agent(self, agent_id: str, agent: BaseAgent) -> None:
         """
@@ -15,7 +16,7 @@ class AgentManager:
         """
         self.agents[agent_id] = agent
 
-    def get_agent(self, agent_id: str) -> Optional[BaseAgent]:
+    def get_agent(self, agent_id: str) -> BaseAgent | None:
         """
         Get an agent by ID.
         """
@@ -28,7 +29,7 @@ class AgentManager:
         if agent_id in self.agents:
             del self.agents[agent_id]
 
-    def list_agents(self) -> Dict[str, BaseAgent]:
+    def list_agents(self) -> dict[str, BaseAgent]:
         """
         List all registered agents.
         """

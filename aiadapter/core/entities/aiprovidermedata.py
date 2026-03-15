@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import List
 
 
 @dataclass
@@ -17,10 +16,10 @@ class AIProviderMetadata:
     capabilities: Lista de capacidades suportadas (text, vision, function_calling, etc).
     """
     name: str
-    models: List[str] = field(default_factory=list)
+    models: list[str] = field(default_factory=list)
     supports_streaming: bool = True
     cost_per_1k_tokens: float = 0.0
     avg_latency_ms: int = 0
     is_local: bool = False
     daily_free_limit: int = 0
-    capabilities: List[str] = field(default_factory=lambda: ["text"])
+    capabilities: list[str] = field(default_factory=lambda: ["text"])

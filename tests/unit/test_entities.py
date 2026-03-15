@@ -1,12 +1,12 @@
 """
 Testes das entidades do domínio: AIRequest, AIResponse, AIProviderMetadata, AICapability.
 """
-import pytest
-from dataclasses import fields
 
+import pytest
+
+from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
-from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.enums.aicapability import AICapability
 
 

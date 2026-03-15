@@ -1,6 +1,7 @@
 """Testes unitários para providers STT (sem chamadas de rede)."""
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from aiadapter.core.entities.audiorequest import AudioRequest
 
@@ -9,7 +10,9 @@ class TestWhisperLocalSTTProvider:
     """Testa WhisperLocalProvider com modelo mockado."""
 
     def _make_provider(self, model_size="base"):
-        from aiadapter.infrastructure.providers.stt.whisper_local_provider import WhisperLocalProvider
+        from aiadapter.infrastructure.providers.stt.whisper_local_provider import (
+            WhisperLocalProvider,
+        )
         with patch.object(WhisperLocalProvider, "_try_load"):
             p = WhisperLocalProvider(model_size=model_size)
         return p
@@ -42,7 +45,9 @@ class TestWhisperLocalSTTProvider:
             p.transcribe(AudioRequest())
 
     def test_transcribe_returns_response(self):
-        from aiadapter.infrastructure.providers.stt.whisper_local_provider import WhisperLocalProvider
+        from aiadapter.infrastructure.providers.stt.whisper_local_provider import (
+            WhisperLocalProvider,
+        )
         with patch.object(WhisperLocalProvider, "_try_load"):
             p = WhisperLocalProvider()
 
@@ -204,7 +209,7 @@ class TestOpenAISTTProvider:
 
         resp = p.transcribe(AudioRequest(audio_data=b"audio", audio_format="mp3"))
 
-        # $0.006 por minuto × 1 minuto = $0.006
+        # $0.006 por minuto x 1 minuto = $0.006
         assert resp.cost == pytest.approx(0.006, abs=0.0001)
 
     def test_language_auto_becomes_none(self):

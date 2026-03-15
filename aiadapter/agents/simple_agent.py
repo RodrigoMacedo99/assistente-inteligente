@@ -1,8 +1,8 @@
-from typing import Optional, List, Dict, Any
 from aiadapter.agents.base_agent import BaseAgent
 from aiadapter.application.ai_service import AIService
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
+
 
 class SimpleAgent(BaseAgent):
     """
@@ -13,7 +13,7 @@ class SimpleAgent(BaseAgent):
         self,
         name: str,
         ai_service: AIService,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         model: str = "gpt-4o",
         temperature: float = 0.7,
         max_tokens: int = 512

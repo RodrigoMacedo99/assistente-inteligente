@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
+from collections.abc import Generator
+
 from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
 from aiadapter.core.enums.aicapability import AICapability
-from typing import List, Dict, Any, Generator
+
 
 class AIProvider(ABC):
 

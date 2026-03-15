@@ -13,10 +13,11 @@ Tier de seleção:
   high   → GPT-4o > Claude sonnet > Gemini pro > DeepSeek reasoner
 """
 import logging
-from typing import List, Dict, Optional
-from aiadapter.core.interfaces.router import AIRouter
+from typing import ClassVar
+
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.interfaces.provider import AIProvider
+from aiadapter.core.interfaces.router import AIRouter
 
 logger = logging.getLogger("aiadapter.router")
 
@@ -31,7 +32,7 @@ class CostRouter(AIRouter):
     """
 
     # Mapeamento de tier → ordem de providers preferidos
-    TIER_ORDER: Dict[str, List[str]] = {
+    TIER_ORDER: ClassVar[dict[str, list[str]]] = {
         "free": [
             "ollama",           # 1º: local, zero custo
             "openrouter_free",  # 2º: OpenRouter modelos gratuitos
@@ -66,13 +67,13 @@ class CostRouter(AIRouter):
 
     def __init__(
         self,
-        providers: Dict[str, AIProvider],
+        providers: dict[str, AIProvider],
         quota_manager=None,
     ):
         self._providers = providers
         self._quota_manager = quota_manager
 
-    def route(self, request: AIRequest) -> List[AIProvider]:
+    def route(self, request: AIRequest) -> list[AIProvider]:
         tier = self._select_tier(request)
 
         # Provider específico solicitado
@@ -80,7 +81,7 @@ class CostRouter(AIRouter):
             preferred = self._providers[request.preferred_provider]
             rest = self._build_fallback_list(tier, exclude=request.preferred_provider)
             logger.info(f"[ROUTER] preferred_provider={request.preferred_provider} → fallback={[p.get_metadata().name for p in rest]}")
-            return [preferred] + rest
+            return [preferred, *rest]
 
         ordered = self._build_fallback_list(tier)
         logger.info(
@@ -139,7 +140,7 @@ class CostRouter(AIRouter):
     def _tier_level(self, tier: str) -> int:
         return {"free": 0, "low": 1, "medium": 2, "high": 3}.get(tier, 1)
 
-    def _build_fallback_list(self, tier: str, exclude: Optional[str] = None) -> List[AIProvider]:
+    def _build_fallback_list(self, tier: str, exclude: str | None = None) -> list[AIProvider]:
         """
         Constrói a lista de providers para o tier dado,
         filtrando providers indisponíveis e sem quota.

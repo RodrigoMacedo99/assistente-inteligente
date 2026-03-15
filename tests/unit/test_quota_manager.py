@@ -1,11 +1,11 @@
 """
 Testes do DailyQuotaManager — quotas diárias com reset automático.
 """
+from datetime import date, timedelta
 import json
 import os
+
 import pytest
-from datetime import date, timedelta
-from unittest.mock import patch
 
 from aiadapter.infrastructure.governance.daily_quota_manager import DailyQuotaManager
 

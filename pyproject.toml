@@ -129,6 +129,7 @@ ignore = [
     "E501",   # line too long (black cuida disso)
     "B008",   # do not perform function calls in default arguments
     "N805",   # first argument of a method should be named 'self'
+    "N999",   # project directory 'assistente-inteligente' has a hyphen — not fixable without renaming
 ]
 
 [tool.ruff.lint.isort]

@@ -1,7 +1,9 @@
-import time
 from collections import defaultdict
-from aiadapter.core.interfaces.rate_limiter import AIRateLimiter
+import time
+
 from aiadapter.core.entities.airequest import AIRequest
+from aiadapter.core.interfaces.rate_limiter import AIRateLimiter
+
 
 class SimpleRateLimiter(AIRateLimiter):
     def __init__(self, rate_limit_per_minute: int = 60):

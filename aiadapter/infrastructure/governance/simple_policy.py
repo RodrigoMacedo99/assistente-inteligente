@@ -1,5 +1,5 @@
-from aiadapter.core.interfaces.policy import AIPolicy
 from aiadapter.core.entities.airequest import AIRequest
+from aiadapter.core.interfaces.policy import AIPolicy
 
 
 class SimplePolicy(AIPolicy):

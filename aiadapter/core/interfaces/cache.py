@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
+
 
 class AICache(ABC):
 
     @abstractmethod
-    def get(self, request: AIRequest) -> Optional[AIResponse]:
+    def get(self, request: AIRequest) -> AIResponse | None:
         pass
 
     @abstractmethod

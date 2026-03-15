@@ -20,11 +20,10 @@ Instalação: pip install edge-tts
 """
 import asyncio
 import logging
-from typing import Optional
 
-from aiadapter.core.interfaces.tts_provider import AITTSProvider
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
+from aiadapter.core.interfaces.tts_provider import AITTSProvider
 
 logger = logging.getLogger("aiadapter.tts.edge")
 
@@ -52,7 +51,7 @@ class EdgeTTSProvider(AITTSProvider):
     Usa asyncio internamente; a interface pública é síncrona.
     """
 
-    def __init__(self, default_voice: Optional[str] = None):
+    def __init__(self, default_voice: str | None = None):
         self._default_voice = default_voice or DEFAULT_VOICE_PT
         self._available = self._check_available()
 

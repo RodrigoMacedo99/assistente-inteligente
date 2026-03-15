@@ -1,15 +1,14 @@
 """
 Fixtures compartilhadas entre todos os testes.
 """
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
+
+from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
-from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.interfaces.provider import AIProvider
-from aiadapter.core.enums.aicapability import AICapability
-
 
 # ─── Entidades base ────────────────────────────────────────────────────────────
 

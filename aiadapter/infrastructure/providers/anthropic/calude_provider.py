@@ -1,9 +1,10 @@
-from typing import List, Dict, Any, Generator, Optional
-from aiadapter.core.interfaces.provider import AIProvider
+from collections.abc import Generator
+
+from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
-from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.enums.aicapability import AICapability
+from aiadapter.core.interfaces.provider import AIProvider
 
 DEFAULT_MODEL = "claude-3-haiku-20240307"
 

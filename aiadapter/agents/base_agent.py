@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
-from aiadapter.core.entities.airequest import AIRequest
-from aiadapter.core.entities.airesponse import AIResponse
+
 from aiadapter.application.ai_service import AIService
+from aiadapter.core.entities.airesponse import AIResponse
+
 
 class BaseAgent(ABC):
     """
@@ -10,11 +10,11 @@ class BaseAgent(ABC):
     Agents can have memory, tools, and specific behaviors.
     """
 
-    def __init__(self, name: str, ai_service: AIService, system_prompt: Optional[str] = None):
+    def __init__(self, name: str, ai_service: AIService, system_prompt: str | None = None):
         self.name = name
         self.ai_service = ai_service
         self.system_prompt = system_prompt
-        self.conversation_history: List[Dict[str, str]] = []
+        self.conversation_history: list[dict[str, str]] = []
 
     @abstractmethod
     def process(self, user_input: str) -> AIResponse:
@@ -29,7 +29,7 @@ class BaseAgent(ABC):
         """
         self.conversation_history.append({"role": role, "content": content})
 
-    def get_conversation_history(self) -> List[Dict[str, str]]:
+    def get_conversation_history(self) -> list[dict[str, str]]:
         """
         Get the conversation history.
         """
@@ -41,16 +41,16 @@ class BaseAgent(ABC):
         """
         self.conversation_history = []
 
-    def _build_messages(self, user_input: str) -> List[Dict[str, str]]:
+    def _build_messages(self, user_input: str) -> list[dict[str, str]]:
         """
         Build the messages list for the AI request, including system prompt and conversation history.
         """
         messages = []
-        
+
         if self.system_prompt:
             messages.append({"role": "system", "content": self.system_prompt})
-        
+
         messages.extend(self.conversation_history)
         messages.append({"role": "user", "content": user_input})
-        
+
         return messages

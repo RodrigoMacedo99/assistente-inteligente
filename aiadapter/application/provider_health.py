@@ -5,9 +5,8 @@ O circuit breaker abre automaticamente quando um provider atinge
 `threshold` falhas consecutivas. Após `cooldown_seconds` sem tentativas,
 o circuit fecha novamente (half-open → reset automático na próxima chamada).
 """
-import time
 from dataclasses import dataclass, field
-from typing import Optional
+import time
 
 
 @dataclass
@@ -23,10 +22,10 @@ class ProviderHealth:
     consecutive_failures: int = 0
     total_failures: int = 0
     total_successes: int = 0
-    last_failure_at: Optional[float] = field(default=None, repr=False)
-    last_success_at: Optional[float] = field(default=None, repr=False)
+    last_failure_at: float | None = field(default=None, repr=False)
+    last_success_at: float | None = field(default=None, repr=False)
     circuit_open: bool = False
-    circuit_open_until: Optional[float] = field(default=None, repr=False)
+    circuit_open_until: float | None = field(default=None, repr=False)
 
     def record_success(self) -> None:
         """Registra sucesso e fecha o circuit breaker se estiver aberto."""

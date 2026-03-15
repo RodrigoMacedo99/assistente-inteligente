@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -23,16 +23,16 @@ class AIRequest:
     preferred_provider: Nome do provider preferido (opcional).
     """
     prompt: str
-    model: Optional[str] = None
-    messages: Optional[List[Dict[str, Any]]] = None
+    model: str | None = None
+    messages: list[dict[str, Any]] | None = None
     temperature: float = 0.7
     max_tokens: int = 512
-    context: Optional[Dict[str, Any]] = None
-    client_id: Optional[str] = None
+    context: dict[str, Any] | None = None
+    client_id: str | None = None
     stream: bool = False
-    tools: Optional[List[Dict[str, Any]]] = None
+    tools: list[dict[str, Any]] | None = None
     priority: str = "normal"
     difficulty: str = "medium"
     complexity: float = 0.5
     max_cost: str = "medium"
-    preferred_provider: Optional[str] = None
+    preferred_provider: str | None = None

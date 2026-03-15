@@ -1,33 +1,44 @@
-import logging
+import contextlib
 import json
-from typing import Optional, List, Dict, Any
+import logging
+from typing import Any
 
-from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File, Form, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse, Response
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
-from aiadapter.config.settings import load_settings
-from aiadapter.infrastructure.routing.cost_router import CostRouter
-from aiadapter.infrastructure.governance.simple_policy import SimplePolicy
-from aiadapter.infrastructure.governance.logger_observability import LoggerObservability
-from aiadapter.infrastructure.governance.simple_rate_limiter import SimpleRateLimiter
-from aiadapter.infrastructure.governance.simple_cache import SimpleCache
-from aiadapter.infrastructure.governance.daily_quota_manager import DailyQuotaManager
-from aiadapter.infrastructure.system.hardware_analyzer import HardwareAnalyzer
 from aiadapter.application.ai_service import AIService
 from aiadapter.application.audio_service import AudioService
+from aiadapter.config.settings import load_settings
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.audiorequest import AudioRequest
+from aiadapter.infrastructure.governance.daily_quota_manager import DailyQuotaManager
+from aiadapter.infrastructure.governance.logger_observability import LoggerObservability
+from aiadapter.infrastructure.governance.simple_cache import SimpleCache
+from aiadapter.infrastructure.governance.simple_policy import SimplePolicy
+from aiadapter.infrastructure.governance.simple_rate_limiter import SimpleRateLimiter
+from aiadapter.infrastructure.providers.anthropic.calude_provider import ClaudeProvider
+from aiadapter.infrastructure.providers.deepseek.deepseek_provider import DeepSeekProvider
+from aiadapter.infrastructure.providers.google.gemini_provider import GeminiProvider
+from aiadapter.infrastructure.providers.groq.groq_provider import GroqProvider
+from aiadapter.infrastructure.providers.local.ollama_provider import OllamaProvider
+from aiadapter.infrastructure.providers.mistral.mistral_provider import MistralProvider
 
 # ─── Providers ────────────────────────────────────────────────────────────────
 from aiadapter.infrastructure.providers.openai.openai_provider import OpenAIProvider
-from aiadapter.infrastructure.providers.anthropic.calude_provider import ClaudeProvider
-from aiadapter.infrastructure.providers.google.gemini_provider import GeminiProvider
-from aiadapter.infrastructure.providers.local.ollama_provider import OllamaProvider
-from aiadapter.infrastructure.providers.groq.groq_provider import GroqProvider
-from aiadapter.infrastructure.providers.mistral.mistral_provider import MistralProvider
-from aiadapter.infrastructure.providers.deepseek.deepseek_provider import DeepSeekProvider
 from aiadapter.infrastructure.providers.openrouter.openrouter_provider import OpenRouterProvider
+from aiadapter.infrastructure.routing.cost_router import CostRouter
+from aiadapter.infrastructure.system.hardware_analyzer import HardwareAnalyzer
 
 # ─── App Setup ────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -48,21 +59,23 @@ quota_manager = DailyQuotaManager()
 hardware_analyzer = HardwareAnalyzer(ollama_base_url=settings.ollama_base_url)
 
 # Cache de serviços por tenant
-tenants: Dict[str, AIService] = {}
+tenants: dict[str, AIService] = {}
 
 # AudioService singleton (providers inicializam sob demanda)
-_audio_service: Optional[AudioService] = None
+_audio_service: AudioService | None = None
 
 
 def _build_audio_service() -> AudioService:
     """Constrói o AudioService com todos os providers de voz disponíveis."""
-    from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
-    from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider
-    from aiadapter.infrastructure.providers.tts.openai_tts_provider import OpenAITTSProvider
-    from aiadapter.infrastructure.providers.tts.elevenlabs_provider import ElevenLabsTTSProvider
-    from aiadapter.infrastructure.providers.stt.whisper_local_provider import WhisperLocalProvider as WhisperLocalSTTProvider
     from aiadapter.infrastructure.providers.stt.groq_stt_provider import GroqSTTProvider
     from aiadapter.infrastructure.providers.stt.openai_stt_provider import OpenAISTTProvider
+    from aiadapter.infrastructure.providers.stt.whisper_local_provider import (
+        WhisperLocalProvider as WhisperLocalSTTProvider,
+    )
+    from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider
+    from aiadapter.infrastructure.providers.tts.elevenlabs_provider import ElevenLabsTTSProvider
+    from aiadapter.infrastructure.providers.tts.openai_tts_provider import OpenAITTSProvider
+    from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
 
     # TTS — ordem: local → gratuito → pago
     tts_providers = [
@@ -99,27 +112,27 @@ def get_audio_service() -> AudioService:
 # ─── Request / Response Models ─────────────────────────────────────────────────
 class AIRequestModel(BaseModel):
     prompt: str
-    model: Optional[str] = None
-    messages: Optional[List[Dict[str, Any]]] = None
+    model: str | None = None
+    messages: list[dict[str, Any]] | None = None
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     max_tokens: int = Field(default=512, ge=1, le=32768)
-    context: Optional[Dict[str, Any]] = None
+    context: dict[str, Any] | None = None
     stream: bool = False
-    tools: Optional[List[Dict[str, Any]]] = None
+    tools: list[dict[str, Any]] | None = None
     priority: str = Field(default="normal", pattern="^(low|normal|high)$")
     difficulty: str = Field(default="medium", pattern="^(easy|medium|hard|expert)$")
     complexity: float = Field(default=0.5, ge=0.0, le=1.0)
     max_cost: str = Field(default="medium", pattern="^(free|low|medium|high)$")
-    preferred_provider: Optional[str] = None
+    preferred_provider: str | None = None
 
 
 class AIResponseModel(BaseModel):
-    output: Optional[str] = None
+    output: str | None = None
     tokens_used: int
     provider_name: str
     cost: float
     is_streaming_chunk: bool = False
-    tool_calls: Optional[List[Dict[str, Any]]] = None
+    tool_calls: list[dict[str, Any]] | None = None
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -129,7 +142,7 @@ def get_tenant_id(x_tenant_id: str = Header(...)) -> str:
     return x_tenant_id
 
 
-def _build_providers() -> Dict:
+def _build_providers() -> dict:
     """Instancia todos os providers disponíveis (apenas os que têm chave configurada)."""
     providers = {}
 
@@ -228,7 +241,7 @@ async def get_hardware_info():
     try:
         return hardware_analyzer.summary()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/v1/completions")
@@ -277,12 +290,12 @@ async def create_completion(
         )
 
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Erro em create_completion: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 async def _stream_generator(ai_service: AIService, request: AIRequest):
@@ -333,7 +346,7 @@ async def list_models(tenant_id: str = Depends(get_tenant_id)):
         return {"models": models, "total": len(models)}
     except Exception as e:
         logger.error(f"Erro em list_models: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/v1/quotas")
@@ -366,9 +379,9 @@ async def get_tenant_stats(tenant_id: str):
 )
 async def text_to_speech(
     text: str = Form(..., description="Texto a ser sintetizado"),
-    voice: Optional[str] = Form(default=None, description="Nome ou ID da voz"),
+    voice: str | None = Form(default=None, description="Nome ou ID da voz"),
     speed: float = Form(default=1.0, ge=0.25, le=4.0, description="Velocidade da fala"),
-    preferred_provider: Optional[str] = Form(default=None, description="Provider preferido (pyttsx3, edge_tts, elevenlabs_tts, openai_tts)"),
+    preferred_provider: str | None = Form(default=None, description="Provider preferido (pyttsx3, edge_tts, elevenlabs_tts, openai_tts)"),
 ):
     try:
         audio_svc = get_audio_service()
@@ -398,12 +411,12 @@ async def text_to_speech(
             },
         )
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Erro em text_to_speech: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post(
@@ -416,8 +429,8 @@ async def text_to_speech(
 )
 async def speech_to_text(
     file: UploadFile = File(..., description="Arquivo de áudio (wav, mp3, m4a, webm)"),
-    language: Optional[str] = Form(default=None, description="Código do idioma (ex: pt, en). None = auto-detect"),
-    preferred_provider: Optional[str] = Form(default=None, description="Provider preferido (whisper_local, groq_stt, openai_stt)"),
+    language: str | None = Form(default=None, description="Código do idioma (ex: pt, en). None = auto-detect"),
+    preferred_provider: str | None = Form(default=None, description="Provider preferido (whisper_local, groq_stt, openai_stt)"),
 ):
     try:
         audio_data = await file.read()
@@ -444,12 +457,12 @@ async def speech_to_text(
             "cost": response.cost,
         }
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=422, detail=str(e)) from e
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Erro em speech_to_text: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/v1/voices")
@@ -497,7 +510,8 @@ async def transcribe_stream(websocket: WebSocket):
                 if data.get("done"):
                     # Processa áudio acumulado
                     if chunks:
-                        import io, wave
+                        import io
+                        import wave
                         raw_audio = b"".join(chunks)
                         buf = io.BytesIO()
                         with wave.open(buf, "wb") as wf:
@@ -527,10 +541,8 @@ async def transcribe_stream(websocket: WebSocket):
         logger.info("[WS] Cliente desconectou do transcribe/stream")
     except Exception as e:
         logger.error(f"[WS] Erro no transcribe/stream: {e}", exc_info=True)
-        try:
+        with contextlib.suppress(Exception):
             await websocket.send_json({"error": str(e)})
-        except Exception:
-            pass
 
 
 if __name__ == "__main__":

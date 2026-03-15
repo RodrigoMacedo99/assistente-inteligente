@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Dict, Any, List
+from typing import Any
 
 
 @dataclass
@@ -17,6 +17,6 @@ class AIResponse:
     provider_name: str
     tokens_used: int = 0
     cost: float = 0.0
-    output: Optional[str] = None
+    output: str | None = None
     is_streaming_chunk: bool = False
-    tool_calls: Optional[List[Dict[str, Any]]] = None
+    tool_calls: list[dict[str, Any]] | None = None

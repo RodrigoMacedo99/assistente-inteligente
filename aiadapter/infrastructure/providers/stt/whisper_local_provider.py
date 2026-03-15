@@ -14,15 +14,13 @@ Instalação:
   # Linux (para suporte a áudio com ffmpeg):
   sudo apt-get install ffmpeg
 """
-import io
-import os
 import logging
+import os
 import tempfile
-from typing import Optional
 
-from aiadapter.core.interfaces.stt_provider import AISTTProvider
 from aiadapter.core.entities.audiorequest import AudioRequest
 from aiadapter.core.entities.audioresponse import AudioResponse
+from aiadapter.core.interfaces.stt_provider import AISTTProvider
 
 logger = logging.getLogger("aiadapter.stt.whisper_local")
 
@@ -41,7 +39,7 @@ class WhisperLocalProvider(AISTTProvider):
         self._model_size = model_size
         self._device = device
         self._model = None
-        self._load_error: Optional[str] = None
+        self._load_error: str | None = None
         self._try_load()
 
     def _try_load(self):

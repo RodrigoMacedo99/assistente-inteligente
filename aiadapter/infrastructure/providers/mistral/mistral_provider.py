@@ -5,12 +5,13 @@ Modelos: mistral-small, mistral-medium, mistral-large, open-mistral (gratuito)
 
 API compatível com OpenAI SDK via base_url.
 """
-from typing import Generator
-from aiadapter.core.interfaces.provider import AIProvider
+from collections.abc import Generator
+
+from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.entities.airequest import AIRequest
 from aiadapter.core.entities.airesponse import AIResponse
-from aiadapter.core.entities.aiprovidermedata import AIProviderMetadata
 from aiadapter.core.enums.aicapability import AICapability
+from aiadapter.core.interfaces.provider import AIProvider
 
 DEFAULT_MODEL = "mistral-small-latest"
 

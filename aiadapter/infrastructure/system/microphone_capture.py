@@ -18,7 +18,6 @@ import io
 import logging
 import struct
 import wave
-from typing import Optional
 
 logger = logging.getLogger("aiadapter.microphone")
 
@@ -39,14 +38,14 @@ class MicrophoneCapture:
         self,
         sample_rate: int = DEFAULT_SAMPLE_RATE,
         channels: int = DEFAULT_CHANNELS,
-        device_index: Optional[int] = None,
+        device_index: int | None = None,
     ):
         self._sample_rate = sample_rate
         self._channels = channels
         self._device_index = device_index
         self._backend = self._detect_backend()
 
-    def _detect_backend(self) -> Optional[str]:
+    def _detect_backend(self) -> str | None:
         try:
             import sounddevice  # noqa: F401
             logger.info("[MIC] Backend: sounddevice")
@@ -99,7 +98,6 @@ class MicrophoneCapture:
 
     def _record_sounddevice(self, duration: float) -> bytes:
         import sounddevice as sd
-        import numpy as np
 
         frames = sd.rec(
             int(duration * self._sample_rate),
@@ -113,8 +111,8 @@ class MicrophoneCapture:
         return self._numpy_to_wav(frames)
 
     def _record_vad_sounddevice(self, max_dur: float, silence_dur: float) -> bytes:
-        import sounddevice as sd
         import numpy as np
+        import sounddevice as sd
 
         chunk_size = int(self._sample_rate * DEFAULT_CHUNK_MS / 1000)
         all_frames: list[np.ndarray] = []

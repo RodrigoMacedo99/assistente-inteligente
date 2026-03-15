@@ -1,7 +1,7 @@
 """Testes unitários para providers TTS (sem chamadas de rede)."""
-import os
+from unittest.mock import MagicMock, mock_open, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, mock_open
 
 from aiadapter.core.entities.audiorequest import AudioRequest
 
@@ -126,7 +126,10 @@ class TestEdgeTTSProvider:
         assert p._speed_to_rate(2.0) == "+100%"
 
     def test_list_voices_pt(self):
-        from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider, VOICES_PT
+        from aiadapter.infrastructure.providers.tts.edge_tts_provider import (
+            VOICES_PT,
+            EdgeTTSProvider,
+        )
         with patch.object(EdgeTTSProvider, "_check_available", return_value=False):
             p = EdgeTTSProvider()
         voices = p.list_voices("pt")
@@ -134,7 +137,10 @@ class TestEdgeTTSProvider:
         assert all(v["language"].startswith("pt") for v in voices)
 
     def test_list_voices_en(self):
-        from aiadapter.infrastructure.providers.tts.edge_tts_provider import EdgeTTSProvider, VOICES_EN
+        from aiadapter.infrastructure.providers.tts.edge_tts_provider import (
+            VOICES_EN,
+            EdgeTTSProvider,
+        )
         with patch.object(EdgeTTSProvider, "_check_available", return_value=False):
             p = EdgeTTSProvider()
         voices = p.list_voices("en")
