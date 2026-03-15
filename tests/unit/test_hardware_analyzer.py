@@ -43,7 +43,8 @@ class TestRecomendacaoDeModelos:
         assert "qwen2.5:72b" not in modelos
 
     def test_8gb_sem_gpu_inclui_modelos_medios(self, analyzer):
-        perfil = HardwareProfile(ram_gb=8.0)
+        # 10GB RAM - 2GB OS overhead = 8GB usable, enough for 7-8B models
+        perfil = HardwareProfile(ram_gb=10.0)
         modelos = analyzer._recommend_models(perfil)
         nomes_suportados = {"llama3.1:8b", "mistral:7b", "gemma2:9b", "qwen2.5:7b"}
         assert any(m in nomes_suportados for m in modelos)

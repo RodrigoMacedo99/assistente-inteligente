@@ -13,10 +13,11 @@ class TestPyttsx3TTSProvider:
     def _make_provider(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
 
-        with patch("pyttsx3.init") as mock_init:
-            engine = MagicMock()
-            engine.getProperty.return_value = []
-            mock_init.return_value = engine
+        mock_pyttsx3 = MagicMock()
+        engine = MagicMock()
+        engine.getProperty.return_value = []
+        mock_pyttsx3.init.return_value = engine
+        with patch.dict("sys.modules", {"pyttsx3": mock_pyttsx3}):
             p = Pyttsx3TTSProvider(rate=150, volume=1.0)
         p._engine = engine
         p._available = True
@@ -25,21 +26,21 @@ class TestPyttsx3TTSProvider:
     def test_get_name(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
 
-        with patch("pyttsx3.init", side_effect=ImportError):
+        with patch.dict("sys.modules", {"pyttsx3": None}):
             p = Pyttsx3TTSProvider()
         assert p.get_name() == "pyttsx3"
 
     def test_is_available_false_when_import_error(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
 
-        with patch("pyttsx3.init", side_effect=ImportError):
+        with patch.dict("sys.modules", {"pyttsx3": None}):
             p = Pyttsx3TTSProvider()
         assert not p.is_available()
 
     def test_speak_raises_when_unavailable(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
 
-        with patch("pyttsx3.init", side_effect=ImportError):
+        with patch.dict("sys.modules", {"pyttsx3": None}):
             p = Pyttsx3TTSProvider()
         with pytest.raises(RuntimeError, match="Pyttsx3 indisponível"):
             p.speak(AudioRequest(text="hello"))
@@ -47,7 +48,7 @@ class TestPyttsx3TTSProvider:
     def test_speak_raises_on_empty_text(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
 
-        with patch("pyttsx3.init", side_effect=ImportError):
+        with patch.dict("sys.modules", {"pyttsx3": None}):
             p = Pyttsx3TTSProvider()
         p._available = True
         p._engine = MagicMock()
@@ -59,10 +60,11 @@ class TestPyttsx3TTSProvider:
 
         fake_wav = b"RIFF....WAVEfmt " + b"\x00" * 100
 
-        with patch("pyttsx3.init") as mock_init:
-            engine = MagicMock()
-            engine.getProperty.return_value = []
-            mock_init.return_value = engine
+        mock_pyttsx3 = MagicMock()
+        engine = MagicMock()
+        engine.getProperty.return_value = []
+        mock_pyttsx3.init.return_value = engine
+        with patch.dict("sys.modules", {"pyttsx3": mock_pyttsx3}):
             p = Pyttsx3TTSProvider()
 
         p._available = True
@@ -88,7 +90,7 @@ class TestPyttsx3TTSProvider:
     def test_list_voices_empty_when_unavailable(self):
         from aiadapter.infrastructure.providers.tts.pyttsx3_provider import Pyttsx3TTSProvider
 
-        with patch("pyttsx3.init", side_effect=ImportError):
+        with patch.dict("sys.modules", {"pyttsx3": None}):
             p = Pyttsx3TTSProvider()
         assert p.list_voices("pt") == []
 
@@ -188,7 +190,8 @@ class TestOpenAITTSProvider:
     def _make_provider(self):
         from aiadapter.infrastructure.providers.tts.openai_tts_provider import OpenAITTSProvider
 
-        with patch("openai.OpenAI"):
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
             p = OpenAITTSProvider(api_key="sk-test")
         return p
 
@@ -203,7 +206,8 @@ class TestOpenAITTSProvider:
     def test_is_available_false_without_key(self):
         from aiadapter.infrastructure.providers.tts.openai_tts_provider import OpenAITTSProvider
 
-        with patch("openai.OpenAI"):
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
             p = OpenAITTSProvider(api_key="")
         assert not p.is_available()
 

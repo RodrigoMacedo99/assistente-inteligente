@@ -117,8 +117,8 @@ class TestDailyQuotaManager:
         assert manager.get_usage("groq") == 0
 
     def test_arquivo_json_corrompido_reseta(self, quota_file):
-        with open(quota_file, "w") as f:
-            f.write("{ json inválido }")
+        with open(quota_file, "w", encoding="utf-8") as f:
+            f.write("{ json invalido }")
 
         # Não deve lançar exceção
         mgr = DailyQuotaManager(quota_file=quota_file)

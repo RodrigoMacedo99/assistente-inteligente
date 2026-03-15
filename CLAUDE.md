@@ -1,205 +1,203 @@
-# 🧠 Assistente Inteligente — AI Adapter Multi-Provider
+# Assistente Inteligente — AI Adapter Multi-Provider
 
-## 🎯 Objetivo
+## Objetivo
 
-Construir um **AI Adapter multi-provider com Clean Architecture**, capaz de:
+AI Adapter multi-provider com Clean Architecture capaz de:
 
-- Integrar múltiplos provedores (OpenAI, Anthropic, etc.)
-- Permitir roteamento inteligente entre modelos com fallback automático
-- Aplicar políticas de governança e rate limiting
-- Manter observabilidade e cache de respostas
-- Ser extensível para novos modelos e capacidades, incluindo streaming e tool calling
-- Servir como base para um assistente tipo “Jarvis” e uma API REST multi-tenant
-
-## 🏗 Arquitetura do Sistema
-
-Estrutura baseada em **Clean Architecture**:
-
-```
-aiadapter/
-│
-├── core/                → Domínio (regras e contratos)
-├── infrastructure/      → Implementações concretas
-├── application/         → Orquestração
-├── config/              → Configuração
-├── api/                 → API REST com FastAPI
-├── agents/              → Sistema de Agentes
-```
-
-### Princípios aplicados
-
-- Clean Architecture
-- Dependency Inversion
-- Baixo acoplamento
-- Alta coesão
-- Separação clara de responsabilidades
-
-## 🧩 Componentes Principais
-
-### 1️⃣ Core (Domínio)
-
-Define contratos e entidades principais:
-
-- `AIProvider` (interface)
-- `AIRequest`
-- `AIResponse`
-- `AIProviderMetadata`
-- `AICapability`
-- `AIRouter`
-- `AIPolicy`
-- `AIObservability`
-- `AIRateLimiter`
-- `AICache`
-- `AITool`
-
-⚠️ O core não depende de SDK externo.
-
-### 2️⃣ Infrastructure
-
-Implementações concretas:
-
-- `OpenAIProvider`
-- `AnthropicProvider`
-- `CostRouter` (com fallback)
-- `SimplePolicy`
-- `LoggerObservability`
-- `SimpleRateLimiter`
-- `SimpleCache`
-
-Aqui vivem:
-
-- SDKs externos
-- Clients autenticados
-- Lógica técnica de roteamento
-
-### 3️⃣ Application
-
-Camada de orquestração com `AIService`.
-
-Fluxo:
-
-```
-Request
-↓
-Policy check
-↓
-Rate Limiting check
-↓
-Cache check
-↓
-Router decide provider(s)
-↓
-Provider executa (com fallback e streaming)
-↓
-Tool Calling (se aplicável)
-↓
-Observability registra
-↓
-Cache response
-↓
-Response
-
-```
-
-Essa camada não conhece detalhes de SDK.
-
-### 4️⃣ Configuração
-
-`Settings` carrega variáveis de ambiente:
-
-- `OPENAI_API_KEY`
-- `ANTHROPIC_API_KEY`
-
-Responsável por isolar configuração do domínio.
-
-### 5️⃣ API REST (FastAPI)
-
-- Endpoint `/v1/completions` para interagir com o AI Adapter, suportando streaming e tool calling.
-- Suporte multi-tenant via `X-Tenant-ID` header.
-- Endpoints para `health check` e `list models`.
-
-### 6️⃣ Sistema de Agentes
-
-- `BaseAgent`: Classe abstrata para agentes de IA com histórico de conversação.
-- `SimpleAgent`: Implementação básica de um agente.
-- `AgentManager`: Gerenciador para múltiplos agentes.
-
-## 🔁 Fluxo Completo do Sistema
-
-```
-.env
-↓
-Settings
-↓
-Clients (OpenAI / Anthropic)
-↓
-Providers
-↓
-Router
-↓
-Policy
-↓
-Rate Limiter
-↓
-Cache
-↓
-AIService
-↓
-API REST (FastAPI)
-↓
-Agentes (opcional)
-↓
-Resposta final
-
-```
-
-## 🚀 O Que Esse Projeto Representa
-
-Não é apenas um script.
-
-É:
-
-- Um SDK de abstração de IA
-- Um motor multi-provider com fallback
-- Base para assistente inteligente com streaming e tool calling
-- Plataforma extensível
-- Gateway de IA corporativo com multi-tenancy e API REST
+- Integrar múltiplos providers de LLM (OpenAI, Anthropic, Groq, Gemini, DeepSeek, Mistral, Ollama, OpenRouter)
+- Roteamento inteligente por custo/dificuldade/prioridade com fallback automático e circuit breaker
+- Providers de voz TTS/STT com fallback automático e circuit breaker
+- Políticas de governança, rate limiting, quota diária e cache
+- Observabilidade e streaming de tokens
+- API REST multi-tenant via FastAPI
 - Sistema de agentes modular
 
-Pode evoluir para:
+---
 
-- Microserviço
-- Biblioteca pública
-- SaaS
-- Plataforma de agentes avançados
-- API Gateway de IA
+## Comandos de Desenvolvimento
 
-## 🏆 Pontos Fortes
+```bash
+# Instalar dependências (cria .venv automaticamente)
+uv sync --extra dev
 
-✔ Separação clara de responsabilidades  
-✔ Injeção de dependência adequada  
-✔ Providers desacoplados  
-✔ Fácil adicionar novos modelos  
-✔ Roteamento inteligente com fallback  
-✔ Governança centralizada com políticas e rate limiting  
-✔ Arquitetura testável  
-✔ Suporte a streaming de tokens  
-✔ Suporte a tool calling  
-✔ API REST com FastAPI  
-✔ Suporte multi-tenant  
-✔ Sistema de agentes modular
+# Rodar testes
+uv run pytest
 
-## 📈 Próximos Passos Naturais (Já Implementados)
+# Linting (Ruff)
+uv run --with ruff ruff check aiadapter/ tests/
 
-1. Fallback automático entre providers  
-2. Rate limiting inteligente  
-3. Cache de respostas  
-4. Streaming de tokens  
-5. Tool calling estruturado  
-6. Multi-tenant (suporte a múltiplas chaves)  
-7. API REST (ex: FastAPI)  
-8. Sistema de agentes  
+# Autofix de linting
+uv run --with ruff ruff check --fix --unsafe-fixes aiadapter/ tests/
 
-## 🧠 Em Uma Frase
+# Formatação (Black)
+uv run --with black black aiadapter/ tests/
 
-Um **AI Gateway com arquitetura limpa e extensível**, pronto para escalar além de um simples uso de SDK, com suporte a streaming, tool calling, multi-tenancy e um sistema de agentes modular.
+# Rodar o servidor
+uv run python main.py
+```
+
+---
+
+## Arquitetura
+
+Baseada em **Clean Architecture**:
+
+```text
+aiadapter/
+├── core/                  # Domínio — contratos e entidades (sem dependências externas)
+│   ├── entities/          # AIRequest, AIResponse, AudioRequest, AudioResponse
+│   ├── interfaces/        # AIProvider, AIRouter, AIPolicy, AITTSProvider, AISTTProvider...
+│   └── enums/             # AICapability
+├── infrastructure/        # Implementações concretas
+│   ├── providers/         # LLM: openai, anthropic, groq, gemini, deepseek, mistral, ollama
+│   │   ├── tts/           # pyttsx3, edge_tts, elevenlabs, openai_tts
+│   │   └── stt/           # whisper_local, groq_stt, openai_stt
+│   ├── governance/        # SimplePolicy, SimpleCache, RateLimiter, QuotaManager
+│   ├── routing/           # CostRouter (tier-based: free/low/medium/high)
+│   └── system/            # HardwareAnalyzer, MicrophoneCapture
+├── application/           # Orquestração
+│   ├── ai_service.py      # Pipeline LLM com fallback
+│   ├── audio_service.py   # Pipeline TTS/STT com circuit breaker
+│   └── provider_health.py # ProviderHealth — circuit breaker por provider
+├── config/                # Settings (carrega .env)
+├── api/                   # FastAPI — endpoints REST e WebSocket
+├── agents/                # BaseAgent, SimpleAgent, AgentManager
+└── factory/               # AbstractFactory, FactoryProvider
+```
+
+---
+
+## Convenções de Código
+
+- **Python 3.10+** — usar `X | None` em vez de `Optional[X]`, `list[T]` em vez de `List[T]`
+- **Black** para formatação (line-length 100)
+- **Ruff** para linting — `N999` ignorado (diretório do projeto tem hífen, aceito via config)
+- **Imports**: stdlib → third-party → first-party (isort, `force-sort-within-sections = true`)
+- **`raise X from e`** dentro de blocos `except` (B904)
+- **`ClassVar`** para atributos mutáveis de classe (RUF012)
+
+---
+
+## Providers de Voz
+
+### TTS (ordem de prioridade)
+
+| Provider | Custo | Modo |
+| --- | --- | --- |
+| `pyttsx3` | Grátis | Offline |
+| `edge_tts` | Grátis | Online (Microsoft Neural) |
+| `elevenlabs_tts` | $0.18/1k chars | Online |
+| `openai_tts` | $15/1M chars | Online |
+
+### STT (ordem de prioridade)
+
+| Provider | Custo | Modo |
+| --- | --- | --- |
+| `whisper_local` | Grátis | Offline (faster-whisper) |
+| `groq_stt` | Grátis | Online (Whisper large-v3) |
+| `openai_stt` | $0.006/min | Online |
+
+### Fallback automático com Circuit Breaker
+
+O `AudioService` implementa fallback automático entre providers com circuit breaker:
+
+- **Retry por provider**: tenta `max_retries` vezes antes de cair para o próximo (default: 1)
+- **Circuit breaker**: após `circuit_breaker_threshold` falhas consecutivas (default: 3), o provider é ignorado por `circuit_breaker_cooldown` segundos (default: 60s)
+- **Half-open reset**: após o cooldown, o circuit fecha automaticamente e o provider pode ser tentado novamente
+- **Fallback chain**: `AudioResponse.fallback_chain` registra quais providers foram tentados e por quê
+
+```python
+svc = AudioService(
+    tts_providers=[pyttsx3, edge_tts, elevenlabs, openai_tts],
+    stt_providers=[whisper_local, groq_stt, openai_stt],
+    max_retries=1,
+    circuit_breaker_threshold=3,
+    circuit_breaker_cooldown=60.0,
+)
+```
+
+---
+
+## Pipeline LLM
+
+```text
+Request → Policy check → Rate Limiting → Cache → Router (tier) →
+Provider (com fallback) → Tool Calling → Observability → Cache → Response
+```
+
+### Roteamento por tier (CostRouter)
+
+| Tier | Providers (ordem) |
+| --- | --- |
+| `free` | ollama → openrouter_free → groq → gemini → deepseek |
+| `low` | groq → gemini → deepseek → mistral → ollama → openai |
+| `medium` | deepseek → mistral → groq → gemini → openai → anthropic |
+| `high` | openai → anthropic → gemini → deepseek → mistral |
+
+---
+
+## API REST
+
+| Método | Endpoint | Descrição |
+| --- | --- | --- |
+| `POST` | `/v1/completions` | LLM completion (streaming opcional) |
+| `GET` | `/v1/models` | Lista modelos disponíveis |
+| `GET` | `/v1/status` | Status dos providers |
+| `GET` | `/v1/hardware` | Perfil de hardware e modelos Ollama recomendados |
+| `GET` | `/v1/quotas` | Quotas diárias dos providers gratuitos |
+| `POST` | `/v1/speak` | TTS com fallback automático |
+| `POST` | `/v1/transcribe` | STT com fallback automático |
+| `GET` | `/v1/voices` | Lista vozes TTS disponíveis |
+| `GET` | `/v1/audio/status` | Saúde dos providers de voz |
+| `WS` | `/v1/transcribe/stream` | STT em tempo real via WebSocket |
+
+**Multi-tenant**: header `X-Tenant-ID` isola rate limiting e quota por cliente.
+
+---
+
+## Variáveis de Ambiente
+
+```bash
+# LLM Providers
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GROQ_API_KEY=
+GOOGLE_API_KEY=
+DEEPSEEK_API_KEY=
+MISTRAL_API_KEY=
+OPENROUTER_API_KEY=
+
+# Voz
+ELEVENLABS_API_KEY=
+WHISPER_MODEL_SIZE=base   # tiny | base | small | medium | large-v3
+
+# Servidor
+HOST=0.0.0.0
+PORT=8000
+LOG_LEVEL=INFO
+```
+
+---
+
+## Testes
+
+```bash
+# Todos os testes unitários
+uv run pytest tests/unit/
+
+# Testes do AudioService e fallback
+uv run pytest tests/unit/test_audio_service.py tests/unit/test_audio_service_fallback.py -v
+
+# Com cobertura
+uv run pytest --cov=aiadapter --cov-report=term-missing
+```
+
+Cobertura mínima exigida: **70%** (configurado em `pyproject.toml`).
+
+---
+
+## Nota sobre N999
+
+O erro `N999 Invalid module name` é causado pelo hífen no diretório `assistente-inteligente`.
+Está suprimido no `pyproject.toml` (`ignore = ["N999"]`) pois renomear o diretório raiz
+quebraria referências externas. O pacote Python em si (`aiadapter/`) usa nome válido.

@@ -94,7 +94,8 @@ class TestGroqSTTProvider:
     def _make_provider(self):
         from aiadapter.infrastructure.providers.stt.groq_stt_provider import GroqSTTProvider
 
-        with patch("groq.Groq"):
+        mock_groq = MagicMock()
+        with patch.dict("sys.modules", {"groq": mock_groq}):
             p = GroqSTTProvider(api_key="gsk_test123")
         return p
 
@@ -105,7 +106,8 @@ class TestGroqSTTProvider:
     def test_is_available_false_without_key(self):
         from aiadapter.infrastructure.providers.stt.groq_stt_provider import GroqSTTProvider
 
-        with patch("groq.Groq"):
+        mock_groq = MagicMock()
+        with patch.dict("sys.modules", {"groq": mock_groq}):
             p = GroqSTTProvider(api_key="")
         assert not p.is_available()
 
@@ -119,7 +121,11 @@ class TestGroqSTTProvider:
         assert not p.is_available()
 
     def test_transcribe_raises_when_unavailable(self):
-        p = self._make_provider()
+        from aiadapter.infrastructure.providers.stt.groq_stt_provider import GroqSTTProvider
+
+        mock_groq = MagicMock()
+        with patch.dict("sys.modules", {"groq": mock_groq}):
+            p = GroqSTTProvider(api_key="gsk_test123")
         p._client = None
         with pytest.raises(RuntimeError, match="GroqSTT indisponível"):
             p.transcribe(AudioRequest(audio_data=b"audio", audio_format="wav"))
@@ -164,7 +170,8 @@ class TestOpenAISTTProvider:
     def _make_provider(self):
         from aiadapter.infrastructure.providers.stt.openai_stt_provider import OpenAISTTProvider
 
-        with patch("openai.OpenAI"):
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
             p = OpenAISTTProvider(api_key="sk-test")
         return p
 
@@ -179,7 +186,8 @@ class TestOpenAISTTProvider:
     def test_is_available_false_without_key(self):
         from aiadapter.infrastructure.providers.stt.openai_stt_provider import OpenAISTTProvider
 
-        with patch("openai.OpenAI"):
+        mock_openai = MagicMock()
+        with patch.dict("sys.modules", {"openai": mock_openai}):
             p = OpenAISTTProvider(api_key="")
         assert not p.is_available()
 
